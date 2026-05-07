@@ -22,7 +22,7 @@ public class DailyMenu {
     private int userId;
 
     @Column(name = "plan_id")
-    private int planId;
+    private Integer planId;
 
     @Column(name = "Menu_date")
     private LocalDate menuDate;

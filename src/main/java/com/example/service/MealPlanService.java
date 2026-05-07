@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.time.format.TextStyle;
 import java.util.stream.Collectors;
@@ -23,6 +24,7 @@ public class MealPlanService {
     @Autowired private UserGoalRepository userGoalRepo;
     @Autowired private RecommendationService recommendationService;
     @Autowired private UserService userService;
+    @Autowired private MealTypeRepository mealTypeRepo;
 
     // 1. Hàm thêm món ăn (Giữ nguyên logic của bạn)[cite: 9, 17]
     @Transactional
@@ -157,7 +159,7 @@ public class MealPlanService {
     }
     // 3. Hàm lấy thực đơn chi tiết (meal_plan.js)
     public Map<String, Object> getDailyMealPlan(Long userId, String dateStr) {
-        LocalDate date = LocalDate.parse(dateStr);
+         LocalDate date = parseSelectedDate(dateStr);
         DailyMenu menu = dailyMenuRepo.findByUserIdAndMenuDate(userId.intValue(), date).orElse(null);
         
         Map<String, Object> res = new HashMap<>();
@@ -170,6 +172,16 @@ public class MealPlanService {
         res.put("mealSections", getMealSections(menu));
         
         return res;
+    }
+     private LocalDate parseSelectedDate(String dateStr) {
+        if (dateStr == null || dateStr.trim().isEmpty()) {
+            return LocalDate.now();
+        }
+        try {
+            return LocalDate.parse(dateStr);
+        } catch (DateTimeParseException ex) {
+            return LocalDate.now();
+        }
     }
     public List<Map<String, Object>> getAllFoodsSimple() {
         return foodRepo.findAll().stream().map(food -> {
@@ -196,6 +208,10 @@ public class MealPlanService {
     public void updateUserMeal(Long userId, Map<String, Object> payload) {
         LocalDate date = LocalDate.parse((String) payload.get("date"));
         Integer mealTypeId = Integer.valueOf(payload.get("mealTypeId").toString());
+        boolean mealTypeExists = mealTypeRepo.existsById(mealTypeId);
+        if (!mealTypeExists) {
+            throw new IllegalArgumentException("Meal type không tồn tại: " + mealTypeId);
+        }
         List<Integer> foodIds = ((List<?>) payload.get("foodIds")).stream()
                 .map(v -> Integer.valueOf(v.toString()))
                 .collect(Collectors.toList());
@@ -257,15 +273,16 @@ public class MealPlanService {
     private List<Map<String, Object>> getMealSections(DailyMenu menu) {
         
         List<Map<String, Object>> sections = new ArrayList<>();
-        Map<Integer, String> mealTypes = Map.of(1, "Bữa sáng", 2, "Bữa trưa", 3, "Bữa tối", 4, "Bữa phụ");
+        List<MealType> mealTypes = mealTypeRepo.findAllByOrderByMealTypeIdAsc();
         Map<Integer, List<MenuDetail>> grouped = new HashMap<>();
         if (menu != null) {
             grouped = menuDetailRepo.findByMenuId(menu.getMenuId()).stream()
                     .collect(Collectors.groupingBy(MenuDetail::getMealTypeId));
         }
 
-        for (Map.Entry<Integer, String> mt : mealTypes.entrySet()) {
-            List<MenuDetail> details = grouped.getOrDefault(mt.getKey(), new ArrayList<>());
+       for (MealType mt : mealTypes) {
+            Integer mealTypeId = mt.getMealTypeId();
+            List<MenuDetail> details = grouped.getOrDefault(mealTypeId, new ArrayList<>());
             List<Map<String, Object>> foods = new ArrayList<>();
             double usedCalories = 0.0;
             List<String> foodIds = new ArrayList<>();
@@ -283,11 +300,11 @@ public class MealPlanService {
                 foodIds.add(String.valueOf(f.getFoodId()));
             }
             Map<String, Object> section = new HashMap<>();
-            section.put("mealTypeId", mt.getKey());
-            section.put("mealName", mt.getValue());
+            section.put("mealTypeId", mealTypeId);
+            section.put("mealName", mt.getMealName());
             section.put("foods", foods);
             section.put("usedCalories", usedCalories);
-            section.put("targetCalories", 0.0);
+           section.put("targetCalories", mt.getTargetCalories() == null ? 0.0 : mt.getTargetCalories());
             section.put("foodIdsString", String.join(",", foodIds));
             sections.add(section);
         }

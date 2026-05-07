@@ -22,8 +22,8 @@ $(document).ready(function() {
             document.getElementById('total-day-calo').innerText = data.totalCalories.toFixed(1);
             document.getElementById('edit-notice').innerText = data.canEdit ? "Bạn có thể chỉnh sửa thực đơn ngày này." : "Ngày đã qua chỉ có thể xem.";
             
-            renderSlider(data.weekSlider);
-            renderMealSections(data.mealSections, data.canEdit);
+             renderSlider(Array.isArray(data.weekSlider) ? data.weekSlider : []);
+            renderMealSections(Array.isArray(data.mealSections) ? data.mealSections : [], !!data.canEdit);
         } catch (err) {
             console.error("Lỗi tải thực đơn:", err);
              $("#week-slider-container").html(`<p class="empty-text">Không tải được dữ liệu tuần.</p>`);
@@ -115,8 +115,12 @@ $(document).ready(function() {
 
     // 5. Thao tác điều hướng & Xóa
     window.changeDate = function(newDate) {
+         if (!newDate) return;
         selectedDate = newDate;
         $('#date-input').val(newDate);
+        const url = new URL(window.location.href);
+        url.searchParams.set('date', newDate);
+        window.history.replaceState({}, '', url);
         fetchMealPlan();
     };
 
@@ -133,16 +137,29 @@ $(document).ready(function() {
         e.preventDefault();
         const foodIds = $('#adjustFoodIds').val();
         const mealTypeId = $('#adjustMealTypeId').val();
+        const submitBtn = $(this).find('button[type="submit"]');
+        submitBtn.prop('disabled', true);
 
-        const res = await fetch('/api/user/meal-plan/update', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ date: selectedDate, mealTypeId, foodIds })
-        });
+       try {
+            const res = await fetch('/api/user/meal-plan/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ date: selectedDate, mealTypeId, foodIds })
+            });
 
-        if (res.ok) {
+            if (!res.ok) {
+                const errorText = await res.text();
+                throw new Error(errorText || `HTTP ${res.status}`);
+            }
+
+
             $('#adjustModal').removeClass('show');
             fetchMealPlan();
+            } catch (err) {
+            console.error('Lưu thực đơn thất bại:', err);
+            alert('Không lưu được thay đổi. Vui lòng thử lại.');
+        } finally {
+            submitBtn.prop('disabled', false);
         }
     });
 

@@ -7,6 +7,7 @@ import com.example.service.UserService;
 import org.springframework.security.core.Authentication;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import lombok.RequiredArgsConstructor;
 
@@ -53,7 +54,11 @@ public class UserMealPlanRestController {
     @PostMapping("/meal-plan/update")
      public ResponseEntity<?> updateMeal(@RequestBody Map<String, Object> payload, Authentication authentication) {
         UserDTO currentUser = userService.getCurrentUser(authentication);
-        mealPlanService.updateUserMeal(currentUser.getId(), payload);
-        return ResponseEntity.ok().build();
+         try {
+            mealPlanService.updateUserMeal(currentUser.getId(), payload);
+            return ResponseEntity.ok().build();
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+        }
     }
 }
