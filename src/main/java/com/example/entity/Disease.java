@@ -17,6 +17,4 @@ public class Disease {
     @Column(name="disease_description")
     private String diseaseDescription;
 
-    @Column(name="disease_type")
-    private String diseaseType;
 }

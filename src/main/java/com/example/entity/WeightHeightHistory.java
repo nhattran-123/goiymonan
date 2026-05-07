@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "weight_height_history")
@@ -28,5 +28,5 @@ public class WeightHeightHistory {
     private double height;
 
     @Column(name = "record_date")
-    private LocalDate recordDate;
+    private LocalDateTime recordDate;
 }

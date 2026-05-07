@@ -18,7 +18,7 @@ public class UserPlan {
     @Column(name = "Setting_id")
     private int settingId;
 
-    @Column(name = "user_id")
+    @Column(name = "User_id")
     private int userId;
 
     @Column(name = "week_start_day")
@@ -27,6 +27,6 @@ public class UserPlan {
     @Column(name = "same_schedule_daily")
     private boolean sameScheduleDaily;
 
-    @Column(name = "nutrition_goal", columnDefinition = "NVARCHAR(MAX)")
+    @Column(name = "nutrition_goal", length = 255)
     private String nutritionGoal;
 }

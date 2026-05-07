@@ -24,12 +24,12 @@ public class DailyMenu {
     @Column(name = "plan_id")
     private int planId;
 
-    @Column(name = "menu_date")
+    @Column(name = "Menu_date")
     private LocalDate menuDate;
 
     @Column(name = "total_calories")
     private double totalCalories;
 
-    @Column(name = "Status", length = 50)
+    @Column(name = "Status", length = 100)
     private String status;
 }

@@ -49,9 +49,6 @@ public class Food {
     @Column(name="create_at")
     private LocalDate createAt;
 
-    @Column(name = "food_type")
-    private Integer foodType;
-
     @JsonIgnore
     @OneToMany(mappedBy = "food", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<FoodIngredient> foodIngredients;
