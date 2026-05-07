@@ -11,8 +11,26 @@ $(document).ready(function() {
             const result = await res.json();
             $('#allergy-select').empty();
             $('#disease-select').empty();
-            result.listIngredient.forEach(i => $('#allergy-select').append(new Option(i.name, i.id)));
-            result.listDisease.forEach(d => $('#disease-select').append(new Option(d.name, d.id)));
+             const ingredients = Array.isArray(result.listIngredient) ? result.listIngredient : [];
+            const diseases = Array.isArray(result.listDisease) ? result.listDisease : [];
+
+            ingredients.forEach(i => {
+                const label = i.ingredientName || i.name || '';
+                const value = i.ingredientId || i.id;
+                if (value != null && label) {
+                    $('#allergy-select').append(new Option(label, value));
+                }
+            });
+
+            diseases.forEach(d => {
+                const label = d.diseaseName || d.name || '';
+                const value = d.diseaseId || d.id;
+                if (value != null && label) {
+                    $('#disease-select').append(new Option(label, value));
+                }
+            });
+
+            $('#allergy-select, #disease-select').trigger('change');
         } catch (err) {
             console.error('Lỗi khi tải dữ liệu dropdown:', err);
         }
