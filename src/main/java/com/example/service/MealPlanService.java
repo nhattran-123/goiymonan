@@ -94,21 +94,65 @@ public class MealPlanService {
             ? (float) todayMenu.getTotalCalories()
             : 0f;
 
-        float targetCalories = bmr * 1.2f;
-        float remainCalories = targetCalories - todayCalories;
+         float targetCalories = goal != null ? goal.getTargetCalories() : bmr * 1.2f;
+        float remainCalories = Math.max(0f, targetCalories - todayCalories);
 
         dto.setTodayCalories(todayCalories);
         dto.setTargetCalories(targetCalories);
         dto.setRemainCalories(remainCalories);
 
     
-        dto.setTodayMeals(new ArrayList<>());
+        dto.setTodayMeals(buildTodayMeals(todayMenu));
 
         dto.setHomeSuggestions(
             recommendationService.getSuggestedFoodsWithMeta(userDTO)
         );
 
          return dto;
+    }
+    private List<com.example.dto.TodayMealDTO> buildTodayMeals(DailyMenu todayMenu) {
+        if (todayMenu == null) {
+            return new ArrayList<>();
+        }
+
+        List<MenuDetail> details = menuDetailRepo.findByMenuId(todayMenu.getMenuId());
+        if (details.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        Map<Integer, List<MenuDetail>> groupedByMealType = details.stream()
+                .collect(Collectors.groupingBy(MenuDetail::getMealTypeId, TreeMap::new, Collectors.toList()));
+
+        List<com.example.dto.TodayMealDTO> meals = new ArrayList<>();
+        for (Map.Entry<Integer, List<MenuDetail>> entry : groupedByMealType.entrySet()) {
+            com.example.dto.TodayMealDTO meal = new com.example.dto.TodayMealDTO();
+            Integer mealTypeId = entry.getKey();
+            List<MenuDetail> mealDetails = entry.getValue();
+
+            meal.setMealName(resolveMealName(mealTypeId));
+            meal.setTotalFoods(mealDetails.size());
+
+            float totalCalories = 0f;
+            for (MenuDetail detail : mealDetails) {
+                totalCalories += foodRepo.findById(detail.getFoodId())
+                        .map(food -> food.getCalories().floatValue())
+                        .orElse(0f);
+            }
+            meal.setTotalCalories(totalCalories);
+            meals.add(meal);
+        }
+
+        return meals;
+    }
+
+    private String resolveMealName(Integer mealTypeId) {
+        return switch (mealTypeId) {
+            case 1 -> "Bữa sáng";
+            case 2 -> "Bữa trưa";
+            case 3 -> "Bữa tối";
+            case 4 -> "Bữa phụ";
+            default -> "Bữa " + mealTypeId;
+        };
     }
     // 3. Hàm lấy thực đơn chi tiết (meal_plan.js)
     public Map<String, Object> getDailyMealPlan(Long userId, String dateStr) {

@@ -25,9 +25,16 @@ async function fetchHomeSummary() {
         const bmiBadge = document.getElementById('bmi-badge');
         if (bmiBadge) {
             bmiBadge.innerText = data.bmiStatus || "Đang tải...";
-            if(data.bmi < 18.5) bmiBadge.style.background = "#3b82f6"; // Gầy
-            else if(data.bmi < 25) bmiBadge.style.background = "#10b981"; // Bình thường
-            else bmiBadge.style.background = "#ef4444"; // Thừa cân
+            bmiBadge.style.color = "#ffffff";
+            bmiBadge.style.fontWeight = "600";
+
+            if (typeof data.bmi === "number") {
+                if (data.bmi < 18.5) bmiBadge.style.background = "#3b82f6"; // Gầy
+                else if (data.bmi < 25) bmiBadge.style.background = "#10b981"; // Bình thường
+                else bmiBadge.style.background = "#ef4444"; // Thừa cân
+            } else {
+                bmiBadge.style.background = "#9ca3af";
+            }
         }
 
         // 2. Xử lý Calo Progress Bar
@@ -97,7 +104,7 @@ function renderSuggestions(foods) {
     }
 
     container.innerHTML = foods.map(food => `
-        <a href="/food-detail?id=${food.foodId}" style="text-decoration:none; color:inherit;">
+        <a href="/food_detail?id=${food.foodId}" style="text-decoration:none; color:inherit;">
             <div class="food-card">
                 <img src="/images/${food.imageUrl}" alt="${food.foodName}" class="food-img" 
                      onerror="this.onerror=null; this.src='https://via.placeholder.com/300x200?text=No+Image'">
