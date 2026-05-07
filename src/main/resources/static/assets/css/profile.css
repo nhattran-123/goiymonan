@@ -29,6 +29,10 @@
 /* Nút bấm */
 .btn-save-wrapper { display: flex; justify-content: flex-end; margin-top: 30px; margin-bottom: 50px; }
 .btn-save { background: var(--primary-green); color: white; padding: 12px 30px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 15px; }
+.btn-save:hover { filter: brightness(0.95); }
+.btn-cancel { background: #9ca3af; }
+.action-buttons { display: inline-flex; gap: 10px; }
+.d-none { display: none !important; }
 .btn-outline-green { background: white; color: var(--primary-green); border: 1px solid var(--primary-green); padding: 5px 15px; border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer; }
 
 /* Tag Bệnh lý & Dị ứng */

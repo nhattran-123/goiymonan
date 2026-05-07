@@ -2,6 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hồ sơ sức khỏe - Healthy Food</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/assets/css/global.css">
@@ -41,7 +42,7 @@
             <p>Cập nhật thông tin để nhận gợi ý món ăn phù hợp</p>
         </div>
 
-        <form id="profileForm">
+          <form id="profileForm" novalidate>
             <!-- Thông tin cơ bản -->
             <div class="profile-card">
                 <div class="card-header">
@@ -58,7 +59,7 @@
                     </div>
                     <div class="form-group">
                         <label>Tuổi</label>
-                        <input type="number" id="age" name="age" class="form-control">
+                        <input type="number" id="age" name="age" class="form-control" min="1" max="120">
                     </div>
                 </div>
             </div>
@@ -70,12 +71,12 @@
                     <div><h3>Chỉ số cơ thể</h3><p>Cân nặng và chiều cao hiện tại & mục tiêu</p></div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group"><label>Cân nặng hiện tại (kg)</label><input type="number" id="weight" name="weight" step="0.1" class="form-control"></div>
-                    <div class="form-group"><label>Chiều cao hiện tại (cm)</label><input type="number" id="height" name="height" step="0.1" class="form-control"></div>
+                   <div class="form-group"><label>Cân nặng hiện tại (kg)</label><input type="number" id="weight" name="weight" step="0.1" class="form-control" min="1"></div>
+                    <div class="form-group"><label>Chiều cao hiện tại (cm)</label><input type="number" id="height" name="height" step="0.1" class="form-control" min="30"></div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group"><label>Cân nặng mong muốn (kg)</label><input type="number" id="desired_weight" name="desired_weight" step="0.1" class="form-control"></div>
-                    <div class="form-group"><label>Chiều cao mong muốn (cm)</label><input type="number" id="desired_height" name="desired_height" step="0.1" class="form-control"></div>
+                    <div class="form-group"><label>Cân nặng mong muốn (kg)</label><input type="number" id="desired_weight" name="desired_weight" step="0.1" class="form-control" min="1"></div>
+                    <div class="form-group"><label>Chiều cao mong muốn (cm)</label><input type="number" id="desired_height" name="desired_height" step="0.1" class="form-control" min="30"></div>
                 </div>
             </div>
 
@@ -89,6 +90,7 @@
                     <label class="form-section-title">Danh sách bệnh lý</label>
                     <select id="disease_ids" name="disease_ids" class="searchable-dropdown" multiple="multiple" style="width: 100%;">
                         <!-- JS render options -->
+                          <option disabled>Đang tải danh sách bệnh lý...</option>
                     </select>
                 </div>
             </div>
@@ -103,6 +105,7 @@
                     <label class="form-section-title">Nguyên liệu dị ứng</label>
                     <select id="allergy_ids" name="allergy_ids" class="searchable-dropdown" multiple="multiple" style="width: 100%;">
                         <!-- JS render options -->
+                         <option disabled>Đang tải danh sách nguyên liệu...</option>
                     </select>
                 </div>
             </div>
@@ -112,16 +115,15 @@
         <i class="fa-solid fa-pen-to-square"></i> Chỉnh sửa hồ sơ
     </button>
 
-    <!-- Cụm nút Lưu/Hủy: Ban đầu sẽ ẩn (d-none) -->
-    <div id="action-buttons" class="d-none">
-        <button type="button" id="cancel-btn" class="btn-save" style="background: #9ca3af; margin-right: 10px;">
-            <i class="fa-solid fa-xmark"></i> Hủy thay đổi
-        </button>
-        <button type="submit" class="btn-save">
-            <i class="fa-solid fa-floppy-disk"></i> Lưu hồ sơ sức khỏe
-        </button>
-    </div>
-</div>
+      <div id="action-buttons" class="action-buttons d-none">
+                    <button type="button" id="cancel-btn" class="btn-save btn-cancel">
+                        <i class="fa-solid fa-xmark"></i> Hủy thay đổi
+                    </button>
+                    <button type="submit" class="btn-save">
+                        <i class="fa-solid fa-floppy-disk"></i> Lưu hồ sơ sức khỏe
+                    </button>
+                </div>
+            </div>
         </form>
     </main>
 
