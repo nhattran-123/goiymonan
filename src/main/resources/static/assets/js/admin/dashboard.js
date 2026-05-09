@@ -23,11 +23,13 @@ async function loadDashboardData() {
         updateStatCard('total-menus', 'menu-growth-val', 'menu-growth-container', data?.totalMenus, data?.menuGrowth);
         document.getElementById('today-activities').innerText = formatNumber(data?.todayActivities);
 
-        renderLoginChart(data?.chartLabels || [], data?.chartData || []);
-        renderRegisterChart(data?.userChartData || []);
+       
         renderTopFoods(data?.topFoods || {});
         renderPopularGoals(data?.popularGoals || {});
 
+        // Vẽ chart sau cùng, nếu chart lỗi vẫn không ảnh hưởng các block dữ liệu khác
+        renderLoginChart(data?.chartLabels || [], data?.chartData || []);
+        renderRegisterChart(data?.userChartData || []);
 
     } catch (error) {
         console.error("Lỗi tải dashboard:", error);
@@ -49,7 +51,9 @@ function updateStatCard(idVal, idGrowth, idContainer, value, growth) {
 }
 
 function renderLoginChart(labels, dataValues) {
-   const canvas = document.getElementById('loginChart');
+    if (typeof Chart === "undefined") return;
+    const canvas = document.getElementById('loginChart');
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
     let gradient = ctx.createLinearGradient(0, 0, 0, 300);
     gradient.addColorStop(0, 'rgba(16, 185, 129, 0.4)');
@@ -88,11 +92,13 @@ function renderLoginChart(labels, dataValues) {
 }
 
 function renderRegisterChart(rawRegisterData) {
+     if (typeof Chart === "undefined") return;
     const currentMonth = new Date().getMonth() + 1;
     const labels = Array.from({length: currentMonth}, (_, i) => `T${i + 1}`);
     const dataValues = rawRegisterData.slice(0, currentMonth);
 
      const canvas = document.getElementById('registerChart');
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (registerChartInstance) {
         registerChartInstance.destroy();

@@ -5,6 +5,7 @@ import com.example.entity.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.*;
+
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -63,15 +64,20 @@ public class AdminService {
         data.put("userChartData", userChartData);
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM");
-        List<String> labels = new ArrayList<>();
-        List<Long> values = new ArrayList<>();
+        Map<String, Long> loginStats = new LinkedHashMap<>();
         for (int i = 9; i >= 0; i--) {
             LocalDate day = LocalDate.now().minusDays(i);
-            labels.add(day.format(formatter));
-            values.add(loginRepo.countByLoginDate(day));
+            loginStats.put(day.format(formatter), 0L);
         }
-        data.put("chartLabels", labels);
-        data.put("chartData", values);
+         for (Object[] row : loginRepo.countDistinctUsersByLoginDateBetweenLast10Days()) {
+            String dayLabel = String.valueOf(row[0]);
+            long loginCount = ((Number) row[1]).longValue();
+            if (loginStats.containsKey(dayLabel)) {
+                loginStats.put(dayLabel, loginCount);
+            }
+        }
+        data.put("chartLabels", new ArrayList<>(loginStats.keySet()));
+        data.put("chartData", new ArrayList<>(loginStats.values()));
 
         Map<String, Integer> topFoods = new LinkedHashMap<>();
         userFavoriteRepo.findAll().stream()
@@ -90,6 +96,9 @@ public class AdminService {
         double totalGoals = goals.stream().mapToDouble(r -> ((Number) r[1]).doubleValue()).sum();
         if (totalGoals > 0) {
             for (Object[] goal : goals) {
+                if (goal[0] == null) {
+                    continue;
+                }
                 String goalType = String.valueOf(goal[0]);
                 double count = ((Number) goal[1]).doubleValue();
                 popularGoals.put(goalType, (count * 100.0) / totalGoals);
