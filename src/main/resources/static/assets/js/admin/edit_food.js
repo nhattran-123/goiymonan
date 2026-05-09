@@ -13,13 +13,14 @@ $(document).ready(function() {
     async function initData() {
         try {
             // Load danh sách nguyên liệu cho Select2
-            const ingResponse = await fetch('/api/admin/ingredients');
-            allIngredients = await ingResponse.json();
+            const ingResponse = await fetch('/api/admin/ingredients?page=1&keyword=');
+            const ingData = await ingResponse.json();
+            allIngredients = ingData.ingredients || [];
             
             // Cập nhật template row
             const $templateSelect = $('.template-row .ing-select');
             allIngredients.forEach(ing => {
-                $templateSelect.append(`<option value="${ing.id}" data-cal="${ing.calories}" data-pro="${ing.protein}" data-fat="${ing.fat}" data-carb="${ing.carbohydrate}">${ing.name} (${ing.category})</option>`);
+                 $templateSelect.append(`<option value="${ing.ingredientId}" data-cal="${ing.calories}" data-pro="${ing.protein}" data-fat="${ing.fat}" data-carb="${ing.carbohydrate}">${ing.ingredientName} (${ing.category})</option>`);
             });
 
             // Load dữ liệu món ăn hiện tại
@@ -38,8 +39,8 @@ $(document).ready(function() {
     function fillFoodData(data) {
        $('#foodId').val(data.foodId ?? data.id ?? '');
         $('#foodName').val(data.foodName ?? data.name ?? '');
-        $('#description').val(data.description);
-        $('#recipe').val(data.recipe);
+       $('#description').val(data.description ?? '');
+        $('#recipe').val(data.recipe ?? '');
          $('#foodType').val(data.foodType ?? '');
         $('#imagePreview').attr('src', data.imageUrl || '/assets/images/default-food.png');
 

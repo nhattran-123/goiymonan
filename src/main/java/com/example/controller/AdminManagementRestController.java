@@ -49,12 +49,29 @@ public class AdminManagementRestController {
         return ResponseEntity.ok(foodService.getAllFoodsForAdmin());
     }
 
+    @GetMapping("/foods/{id}")
+    public ResponseEntity<?> getFoodById(@PathVariable Integer id) {
+        return ResponseEntity.ok(foodService.getFoodDetailForAdmin(id));
+    }
+
     @PostMapping("/add-food")
     public ResponseEntity<?> addFood(@RequestParam("imageFile") MultipartFile file, @RequestParam Map<String, Object> params) {
         foodService.saveFoodWithImage(file, params);
         return ResponseEntity.ok().build();
     }
 
+     @PutMapping("/foods/{id}")
+    public ResponseEntity<?> updateFood(
+            @PathVariable Integer id,
+            @RequestParam(value = "imageFile", required = false) MultipartFile imageFile,
+            @RequestParam Map<String, Object> params,
+            @RequestParam(value = "ingredientIds", required = false) java.util.List<Integer> ingredientIds,
+            @RequestParam(value = "quantities", required = false) java.util.List<Double> quantities,
+            @RequestParam(value = "units", required = false) java.util.List<String> units) {
+        foodService.updateFoodWithImageAndIngredients(id, imageFile, params, ingredientIds, quantities, units);
+        return ResponseEntity.ok().build();
+    }
+    
     @DeleteMapping("/foods/{id}")
     public ResponseEntity<?> deleteFood(@PathVariable Integer id) {
         foodService.deleteFood(id);

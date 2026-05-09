@@ -14,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class FoodService {
@@ -149,6 +150,69 @@ public void saveFoodWithIngredients(FoodDTO dto) {
             return dto;
         }).toList();
    }
+    public FoodDTO getFoodDetailForAdmin(Integer foodId) {
+        Food food = foodRepo.findById(foodId).orElse(null);
+        if (food == null) return null;
+
+        List<IngredientInFoodDTO> ingredientDTOs = foodIngRepo.findByFood_FoodId(foodId).stream().map(fi -> {
+            IngredientInFoodDTO dto = new IngredientInFoodDTO();
+            dto.setIngredientId(fi.getIngredient().getIngredientId());
+            dto.setIngredientName(fi.getIngredient().getIngredientName());
+            dto.setQuantity(fi.getQuantity());
+            dto.setUnit(fi.getUnit());
+            return dto;
+        }).toList();
+
+        FoodDTO dto = new FoodDTO();
+        dto.setFoodId(food.getFoodId());
+        dto.setFoodName(food.getFoodName());
+        dto.setDescription(food.getDescription());
+        dto.setRecipe(food.getRecipe());
+        dto.setImageUrl(food.getImageUrl());
+        dto.setCalories(food.getCalories());
+        dto.setProtein(food.getProtein());
+        dto.setFat(food.getFat());
+        dto.setCarbohydrate(food.getCarbohydrate());
+        dto.setFoodType(food.getFoodType());
+        dto.setIngredients(ingredientDTOs);
+        return dto;
+    }
+
+    @Transactional
+    public void updateFoodWithImageAndIngredients(Integer foodId, MultipartFile imageFile, Map<String, Object> params,
+                                                  List<Integer> ingredientIds, List<Double> quantities, List<String> units) {
+        Food food = foodRepo.findById(foodId).orElseThrow(() -> new RuntimeException("Food not found"));
+        food.setFoodName((String) params.get("name"));
+        food.setDescription((String) params.get("description"));
+        food.setRecipe((String) params.get("recipe"));
+        food.setCalories(Double.parseDouble(params.get("calories").toString()));
+        food.setProtein(Double.parseDouble(params.get("protein").toString()));
+        food.setFat(Double.parseDouble(params.get("fat").toString()));
+        food.setCarbohydrate(Double.parseDouble(params.get("carbohydrate").toString()));
+        if (params.get("foodType") != null && !params.get("foodType").toString().isBlank()) {
+            food.setFoodType(Integer.parseInt(params.get("foodType").toString()));
+        }
+        if (imageFile != null && !imageFile.isEmpty() && imageFile.getOriginalFilename() != null) {
+            food.setImageUrl(imageFile.getOriginalFilename());
+        }
+        foodRepo.save(food);
+
+        foodIngRepo.deleteByFoodFoodId(foodId);
+        if (ingredientIds == null || quantities == null || units == null) return;
+
+        for (int i = 0; i < ingredientIds.size(); i++) {
+            if (i >= quantities.size() || i >= units.size()) break;
+            Optional<Ingredient> ingredientOpt = ingredientRepo.findById(ingredientIds.get(i));
+            if (ingredientOpt.isEmpty()) continue;
+            FoodIngredient fi = new FoodIngredient();
+            fi.setFood(food);
+            fi.setIngredient(ingredientOpt.get());
+            fi.setQuantity(quantities.get(i));
+            fi.setUnit(units.get(i));
+            foodIngRepo.save(fi);
+        }
+    }
+
 
     public void deleteFood(Integer id) {
         foodRepo.deleteById(id);
