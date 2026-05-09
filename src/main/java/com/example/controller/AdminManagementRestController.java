@@ -55,8 +55,13 @@ public class AdminManagementRestController {
     }
 
     @PostMapping("/add-food")
-    public ResponseEntity<?> addFood(@RequestParam("imageFile") MultipartFile file, @RequestParam Map<String, Object> params) {
-        foodService.saveFoodWithImage(file, params);
+    public ResponseEntity<?> addFood(
+            @RequestParam("imageFile") MultipartFile file,
+            @RequestParam Map<String, Object> params,
+            @RequestParam(value = "ingredientIds", required = false) java.util.List<Integer> ingredientIds,
+            @RequestParam(value = "quantities", required = false) java.util.List<Double> quantities,
+            @RequestParam(value = "units", required = false) java.util.List<String> units) {
+        foodService.saveFoodWithImage(file, params, ingredientIds, quantities, units);
         return ResponseEntity.ok().build();
     }
 
@@ -71,7 +76,7 @@ public class AdminManagementRestController {
         foodService.updateFoodWithImageAndIngredients(id, imageFile, params, ingredientIds, quantities, units);
         return ResponseEntity.ok().build();
     }
-    
+
     @DeleteMapping("/foods/{id}")
     public ResponseEntity<?> deleteFood(@PathVariable Integer id) {
         foodService.deleteFood(id);

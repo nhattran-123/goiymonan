@@ -66,13 +66,15 @@ public class FoodService {
     }
 
     @Transactional
-    public void saveFoodWithImage(MultipartFile file, Map<String, Object> params) {
+    public void saveFoodWithImage(MultipartFile file, Map<String, Object> params,
+                                  List<Integer> ingredientIds, List<Double> quantities, List<String> units) {
         
         String fileName = (file != null) ? file.getOriginalFilename() : "default_food.jpg"; 
         
         Food food = new Food();
         food.setFoodName((String) params.get("name"));
         food.setDescription((String) params.get("description"));
+        food.setRecipe((String) params.get("recipe"));
         food.setImageUrl(fileName);
         
         food.setCalories(Double.parseDouble(params.get("calories").toString()));
@@ -83,7 +85,22 @@ public class FoodService {
             food.setFoodType(Integer.parseInt(params.get("foodType").toString()));
         }
         
-        foodRepo.save(food);
+        Food savedFood = foodRepo.save(food);
+
+        if (ingredientIds == null || quantities == null || units == null) return;
+
+        for (int i = 0; i < ingredientIds.size(); i++) {
+            if (i >= quantities.size() || i >= units.size()) break;
+            Optional<Ingredient> ingredientOpt = ingredientRepo.findById(ingredientIds.get(i));
+            if (ingredientOpt.isEmpty()) continue;
+
+            FoodIngredient foodIngredient = new FoodIngredient();
+            foodIngredient.setFood(savedFood);
+            foodIngredient.setIngredient(ingredientOpt.get());
+            foodIngredient.setQuantity(quantities.get(i));
+            foodIngredient.setUnit(units.get(i));
+            foodIngRepo.save(foodIngredient);
+        }
     }
 
     /**
