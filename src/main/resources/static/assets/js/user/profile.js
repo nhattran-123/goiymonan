@@ -1,7 +1,7 @@
 $(document).ready(function() {
     // 1. Khởi tạo Select2 với giao diện thẻ (Tags)
     $('.searchable-dropdown').select2({
-        placeholder: "Gõ để tìm kiếm (ví dụ: Tiểu đường, Tôm, ...)",
+        placeholder: "Chọn thông tin phù hợp...",
         allowClear: true,
         closeOnSelect: false, 
         language: { noResults: () => "Không tìm thấy dữ liệu" }
@@ -10,8 +10,13 @@ $(document).ready(function() {
     // Hàm chuyển đổi chế độ Xem/Sửa
     function toggleEditMode(isEditing) {
         const form = $('#profileForm');
-        form.find('input, select').prop('disabled', !isEditing);
         
+        // Khóa hoặc mở các input/select thông thường
+        form.find('input, select').not('.searchable-dropdown').prop('disabled', !isEditing);
+        
+        // Riêng với Select2, cần disable qua hàm của nó để giao diện mờ đi đúng cách
+        $('.searchable-dropdown').prop('disabled', !isEditing).trigger('change');
+
         if (isEditing) {
             $('#edit-btn').addClass('d-none');
             $('#action-buttons').removeClass('d-none');
@@ -19,10 +24,6 @@ $(document).ready(function() {
             $('#edit-btn').removeClass('d-none');
             $('#action-buttons').addClass('d-none');
         }
-    }
-
-    function isInvalidNumber(value) {
-        return Number.isNaN(value) || value <= 0;
     }
 
     // 2. Tải dữ liệu ban đầu
@@ -93,22 +94,14 @@ $(document).ready(function() {
         // Tên các thuộc tính ở đây PHẢI khớp chính xác với UserDTO.java
         const formData = {
             gender: $('#gender').val(),
-             age: parseInt($('#age').val(), 10),
+            age: parseInt($('#age').val()),
             weight: parseFloat($('#weight').val()),
             height: parseFloat($('#height').val()),
-           desiredWeight: parseFloat($('#desired_weight').val()),
-            desiredHeight: parseFloat($('#desired_height').val()),
-            diseaseIds: ($('#disease_ids').val() || []).map(Number),
-            allergyIds: ($('#allergy_ids').val() || []).map(Number)
+            desiredWeight: parseFloat($('#desired_weight').val()), // Sửa thành camelCase
+            desiredHeight: parseFloat($('#desired_height').val()), // Sửa thành camelCase
+            diseaseIds: $('#disease_ids').val() || [], // Sửa thành camelCase
+            allergyIds: $('#allergy_ids').val() || []  // Sửa thành camelCase
         };
-        if (isInvalidNumber(formData.age) || formData.age > 120 ||
-            isInvalidNumber(formData.weight) ||
-            isInvalidNumber(formData.height) ||
-            isInvalidNumber(formData.desiredWeight) ||
-            isInvalidNumber(formData.desiredHeight)) {
-            alert('Vui lòng nhập đầy đủ và hợp lệ cho tuổi, cân nặng, chiều cao.');
-            return;
-        }
 
         try {
             const response = await fetch('/api/user/update-profile', {

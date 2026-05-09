@@ -2,6 +2,7 @@ package com.example.controller;
 
 import com.example.dto.FavoriteRequest;
 import com.example.dto.FoodDTO;
+import com.example.dto.UpdateStatsRequest;
 import com.example.dto.UserDTO;
 import com.example.service.*;
 
@@ -25,12 +26,10 @@ public class UserSideRestController {
 
     @Autowired private UserService userService;
 
-    // --- CÁC HÀM CŨ ĐÃ CHUYỂN SANG AUTHENTICATION ---
 
     @GetMapping("/suggested-foods")
     public ResponseEntity<?> getSuggestions(Authentication authentication) {
         UserDTO currentUser = userService.getCurrentUser(authentication);
-        // Lưu ý: recommendationService cần được chỉnh sửa để nhận UserDTO hoặc ID
         return ResponseEntity.ok(recommendationService.getSuggestedFoodsWithMeta(currentUser));
     }
 
@@ -67,25 +66,30 @@ public class UserSideRestController {
     }
 
     @PostMapping("/update-stats")
-    public ResponseEntity<?> updateStats(@RequestBody Map<String, Float> stats, Authentication authentication) {
+    public ResponseEntity<?> updateStats(@RequestBody UpdateStatsRequest request, Authentication authentication) {
         UserDTO currentUser = userService.getCurrentUser(authentication);
-        userService.updateWeightHeight(currentUser.getId(), stats.get("current_height"), stats.get("current_weight"));
-        return ResponseEntity.ok().build();
-    }
+    
+        userService.updateWeightHeight(
+            currentUser.getId(), 
+            request.getWeight(), 
+            request.getHeight()
+    );
+    
+    return ResponseEntity.ok().build();
+}
 
-    // --- 3 API MỚI CHO TRANG PROFILE ---
 
     @GetMapping("/profile")  
     public ResponseEntity<?> getProfile(Authentication authentication) {
         UserDTO currentUser = userService.getCurrentUser(authentication);
-        // Trả về thông tin chi tiết bao gồm userDiseaseIds và userAllergyIds
+        
         return ResponseEntity.ok(userService.getUserFullProfile(currentUser.getId()));
     }
 
     @PostMapping("/update-profile")
     public ResponseEntity<?> updateProfile(@RequestBody UserDTO profileDTO, Authentication authentication) {
         UserDTO currentUser = userService.getCurrentUser(authentication);
-        // Xử lý cập nhật thông tin cá nhân, bệnh lý và dị ứng
+        
         userService.updateFullProfile(currentUser.getId(), profileDTO);
         return ResponseEntity.ok().build();
     }
@@ -97,7 +101,7 @@ public class UserSideRestController {
 
     @GetMapping("/ingredients")
     public ResponseEntity<?> getAllIngredients() {
-        // Trả về danh mục toàn bộ nguyên liệu để hiện Dropdown dị ứng
+       
         return ResponseEntity.ok(ingredientService.getAllIngredients());
     }
 
@@ -105,20 +109,14 @@ public class UserSideRestController {
     public ResponseEntity<?> getFavorites(
         @RequestParam(defaultValue = "") String q, 
         Authentication authentication) {
-    
         UserDTO currentUser = userService.getCurrentUser(authentication);
-    
-        // Gọi Service xử lý lọc danh sách
         return ResponseEntity.ok(favoriteService.searchUserFavorites(currentUser.getId(), q));
     }
 
     @PostMapping("/favorites/remove")
     public ResponseEntity<?> removeFavorite(@RequestParam Integer foodId, Authentication authentication) {
         UserDTO currentUser = userService.getCurrentUser(authentication);
-    
-        // Sử dụng hàm toggle đã có sẵn (hàm này sẽ xóa nếu bản ghi đã tồn tại)
-        favoriteService.toggleFavorite(currentUser.getId(), foodId);
-    
+        favoriteService.toggleFavorite(currentUser.getId(), foodId);  
         return ResponseEntity.ok().build();
     }
 }

@@ -1,16 +1,18 @@
 package com.example.controller;
 
+import com.example.dto.MealConfirmRequest; // Thêm import này
+import com.example.dto.MealSaveRequest;
 import com.example.dto.UserDTO;
 import com.example.service.MealPlanService;
 import com.example.service.UserService;
 
 import org.springframework.security.core.Authentication;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import lombok.RequiredArgsConstructor;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 @RestController
@@ -18,50 +20,53 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class UserMealPlanRestController {
 
-    @Autowired private MealPlanService mealPlanService;
-    
+    private final MealPlanService mealPlanService;
     private final UserService userService;
 
+    // 1. Lấy Dashboard Summary (Trang chủ)
     @GetMapping("/home-summary")
     public ResponseEntity<?> getHomeSummary(Authentication authentication) {
-        UserDTO currentUser =
-            userService.getCurrentUser(authentication);
+        UserDTO currentUser = userService.getCurrentUser(authentication);
         return ResponseEntity.ok(
             mealPlanService.getHomeDashboardData(currentUser.getId())
         );
     }
 
+    // 2. Lấy kế hoạch bữa ăn theo ngày
     @GetMapping("/meal-plan")
-    public ResponseEntity<?> getMealPlan(@RequestParam String date, Authentication authentication) {
+    public ResponseEntity<?> getMealPlan(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            Authentication authentication) {
         UserDTO currentUser = userService.getCurrentUser(authentication);
-        return ResponseEntity.ok(mealPlanService.getDailyMealPlan(currentUser.getId(), date));
+        return ResponseEntity.ok(mealPlanService.getMealPlan(currentUser.getId().intValue(), date));
     }
 
-
-    @GetMapping("/all-foods-simple")
-    public ResponseEntity<?> getAllFoodsSimple() {
-        return ResponseEntity.ok(mealPlanService.getAllFoodsSimple());
+    // 3. Lưu kế hoạch 
+    @PostMapping("/meal-plan/save-batch")
+    public ResponseEntity<?> saveBatch(@RequestBody MealSaveRequest request) {
+        try {
+            mealPlanService.saveMealSession(request);
+            return ResponseEntity.ok(Map.of("status", "success"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
     }
 
-    @DeleteMapping("/meal-plan/remove")
-    public ResponseEntity<?> removeMealDetail(@RequestParam Integer detailId, Authentication authentication) {
-        UserDTO currentUser = userService.getCurrentUser(authentication);
-        mealPlanService.removeMealDetail(currentUser.getId(), detailId);
-        return ResponseEntity.ok().build();
+    // 4. XÁC NHẬN ĐÃ ĂN 
+    @PostMapping("/meal-plan/confirm")
+    public ResponseEntity<?> confirmMeal(
+            @RequestBody MealConfirmRequest request, 
+            Authentication authentication) {
+        try {
+            UserDTO currentUser = userService.getCurrentUser(authentication);
+            mealPlanService.confirmMeal(currentUser.getId().intValue(), request);
+            return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "message", "Đã xác nhận bữa ăn và cập nhật Calo nạp vào!"
+            ));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
     }
-     
-
-    @PostMapping("/meal-plan/update")
-	 public ResponseEntity<?> updateMeal(@RequestBody Map<String, Object> payload, Authentication authentication) {
-	    UserDTO currentUser = userService.getCurrentUser(authentication);
-	     try {
-	        mealPlanService.updateUserMeal(currentUser.getId(), payload);
-	        return ResponseEntity.ok().build();
-	    } catch (IllegalArgumentException ex) {
-	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
-	    } catch (Exception ex) {
-	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-	                .body("Không thể lưu thực đơn. Vui lòng kiểm tra món ăn đã chọn và thử lại.");
-	    }
-	}
 }

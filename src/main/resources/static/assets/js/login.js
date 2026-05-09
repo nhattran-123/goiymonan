@@ -37,11 +37,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 }, 1000);
 
             } else {
-                if (result.status === "INACTIVE") {
-                    showMsg('error', result.message || 'Tài khoản đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.');
-                } else {
-                    showMsg('error', result.message || 'Email hoặc mật khẩu không chính xác');
-                }
+                showMsg('error', 'Email hoặc mật khẩu không chính xác');
                 btnLogin.innerText = "Đăng nhập";
                 btnLogin.disabled = false;
             }

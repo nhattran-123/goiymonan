@@ -136,7 +136,6 @@
 .btn-add {
     background: linear-gradient(135deg, #22c55e, #16a34a);
     color: white;
-    text-decoration: none !important;
 }
 .btn-add:hover {
     opacity: 0.9;

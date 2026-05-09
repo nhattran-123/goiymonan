@@ -36,23 +36,6 @@ public class AuthRestController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest, HttpServletRequest request) {
         try {
-             Map<String, Object> authResult = userService.authenticate(loginRequest);
-            String status = (String) authResult.get("status");
-
-            if ("INACTIVE".equals(status)) {
-                Map<String, Object> errorRes = new HashMap<>();
-                errorRes.put("status", "INACTIVE");
-                errorRes.put("message", "Tài khoản đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.");
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorRes);
-            }
-
-            if (!"SUCCESS".equals(status)) {
-                Map<String, Object> errorRes = new HashMap<>();
-                errorRes.put("status", "ERROR");
-                errorRes.put("message", "Email hoặc mật khẩu không chính xác");
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorRes);
-            }
-
             Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
             );
@@ -72,7 +55,11 @@ public class AuthRestController {
             response.put("status", "SUCCESS");
             
             
-            response.put("redirect", "ADMIN".equalsIgnoreCase(user.getRole()) ? "/admin/dashboard" : "/home");
+            if ("ADMIN".equalsIgnoreCase(user.getRole())) {
+                response.put("redirect", "/admin/dashboard");
+            } else {
+                response.put("redirect", "/home");
+            }
 
             return ResponseEntity.ok(response);
 

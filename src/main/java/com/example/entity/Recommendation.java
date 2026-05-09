@@ -27,7 +27,7 @@ public class Recommendation {
     private Food food; 
 
     @Column(name = "score")
-    private Float score; 
+    private Integer score; 
 
     @Column(name = "reason", columnDefinition = "NVARCHAR(MAX)")
     private String reason; 

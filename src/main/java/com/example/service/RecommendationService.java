@@ -104,6 +104,7 @@ public class RecommendationService {
             dto.setCalories(food.getCalories());
             dto.setAllergyConflictCount(conflicts);
             dto.setSuitabilityScore(score);
+            dto.setFoodType(food.getFoodType());
 
            return dto;
         }

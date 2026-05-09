@@ -1,21 +1,19 @@
 package com.example.dto;
 
-import lombok.Data;
 import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import lombok.Data;
 
 @Data
 public class MealSectionDTO {
+    @JsonProperty("mealTypeId") // Ép tên giống JS dòng 51
     private Integer mealTypeId;
-    private String mealName;
-    private double targetCalories;
-    private double usedCalories;
-    private List<FoodSummaryDTO> foods; 
-}
-
-@Data
-class FoodSummaryDTO {
-    private Integer foodId;
-    private String foodName;
-    private String imageUrl;
-    private double calories;
+    
+    @JsonProperty("foods")
+    private List<FoodDTO> foods;
+    
+    @JsonProperty("confirmed")
+    private boolean confirmed;
 }

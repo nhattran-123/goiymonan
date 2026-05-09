@@ -11,4 +11,5 @@ public class FoodSuggestionDTO {
     private Double calories;
     private Integer allergyConflictCount;
     private Float suitabilityScore;
+    private Integer foodType;
 }

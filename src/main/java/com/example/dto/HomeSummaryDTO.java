@@ -4,6 +4,7 @@ import lombok.Data;
 @Data
 
 public class HomeSummaryDTO {
+    private Integer menuId;
     private String name;
 
     private float bmi ;

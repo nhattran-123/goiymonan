@@ -8,6 +8,5 @@ import java.util.List;
 @Repository
 public interface WeightHeightHistoryRepository extends JpaRepository<WeightHeightHistory, Integer> {
     // Lấy lịch sử thay đổi chỉ số của một người dùng
-    List<WeightHeightHistory> findByUserIdOrderByRecordDateDesc(Integer userId);
-    List<WeightHeightHistory> findByUserIdOrderByRecordDateAsc(Long userId);
+   List<WeightHeightHistory> findByUserIdOrderByRecordedAtAsc(Long userId);
 }

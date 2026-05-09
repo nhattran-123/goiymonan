@@ -1,62 +1,51 @@
 $(document).ready(function() {
+    // 1. Khởi tạo Select2
     $('.searchable-dropdown').select2({
-        placeholder: "Bắt đầu gõ để tìm...",
-        allowClear: true,
-        language: { noResults: () => "Không tìm thấy dữ liệu!" }
+        placeholder: "Gõ để tìm kiếm...",
+        allowClear: true
     });
 
+    // SỬA: Sử dụng API tập trung để load dữ liệu cho Step 4
     async function loadData() {
         try {
             const res = await fetch('/api/auth/register-data');
             const result = await res.json();
+
+            // Xóa dữ liệu cũ trước khi append để tránh lặp
             $('#allergy-select').empty();
             $('#disease-select').empty();
-             const ingredients = Array.isArray(result.listIngredient) ? result.listIngredient : [];
-            const diseases = Array.isArray(result.listDisease) ? result.listDisease : [];
 
-            ingredients.forEach(i => {
-                const label = i.ingredientName || i.name || '';
-                const value = i.ingredientId || i.id;
-                if (value != null && label) {
-                    $('#allergy-select').append(new Option(label, value));
-                }
-            });
-
-            diseases.forEach(d => {
-                const label = d.diseaseName || d.name || '';
-                const value = d.diseaseId || d.id;
-                if (value != null && label) {
-                    $('#disease-select').append(new Option(label, value));
-                }
-            });
-
-            $('#allergy-select, #disease-select').trigger('change');
+            result.listIngredient.forEach(i => $('#allergy-select').append(new Option(i.name, i.id)));
+            result.listDisease.forEach(d => $('#disease-select').append(new Option(d.name, d.id)));
         } catch (err) {
-            console.error('Lỗi khi tải dữ liệu dropdown:', err);
+            console.error("Lỗi khi tải dữ liệu dropdown:", err);
         }
     }
 
     loadData();
 
+    // 2. Xử lý Submit Form cuối cùng
     $('#regForm').on('submit', async function(e) {
         e.preventDefault();
         const btn = $('#btnSubmit');
-        btn.text('Đang xử lý...').prop('disabled', true);
+        btn.text('Đang xử lý...');
+        btn.prop('disabled', true);
 
         const formData = new FormData(this);
         const data = Object.fromEntries(formData.entries());
         
+        // SỬA: Đồng bộ tên thuộc tính khớp với UserDTO (camelCase)
         data.allergyIds = $('#allergy-select').val() || [];
         data.diseaseIds = $('#disease-select').val() || [];
         
         // SỬA: Lấy giá trị Goal Type từ Radio button
         data.goalType = $("input[name='goal']:checked").val();
         
-       data.age = parseInt(data.age || 0, 10);
-        data.height = parseFloat(data.height || 0);
-        data.weight = parseFloat(data.weight || 0);
-        data.desiredHeight = parseFloat(data.desired_height || 0);
-        data.desiredWeight = parseFloat(data.desired_weight || 0);
+        // SỬA: Đảm bảo các chỉ số là kiểu số (Number)
+        data.age = parseInt(data.age);
+        data.height = parseFloat(data.height);
+        data.weight = parseFloat(data.weight);
+        data.desiredWeight = parseFloat(data.desired_weight);
 
         try {
             const res = await fetch('/api/auth/register', {
@@ -65,46 +54,50 @@ $(document).ready(function() {
                 body: JSON.stringify(data)
             });
 
-            
+            // SỬA: Kiểm tra phản hồi dạng chuỗi "SUCCESS" từ AuthController
             const resultText = await res.text();
-             if (resultText === 'SUCCESS') {
-                window.location.href = '/login?registered=true';
+
+            if (resultText === "SUCCESS") {
+                // Tự động chuyển hướng sang trang đăng nhập với thông báo thành công
+                window.location.href = "/login?registered=true";
+            } else if (resultText === "EMAIL_EXISTS") {
+                $('#server-error').text("Email này đã được sử dụng. Vui lòng thử email khác.").show();
+                btn.text('Hoàn tất').prop('disabled', false);
             } else {
-                $('#server-error').text('Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.').show();
-                btn.text('Đăng ký →').prop('disabled', false);
+                $('#server-error').text("Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.").show();
+                btn.text('Hoàn tất').prop('disabled', false);
             }
         } catch (err) {
-            console.error('Lỗi kết nối:', err);
-            $('#server-error').text('Không thể kết nối đến máy chủ. Vui lòng thử lại sau.').show();
-            btn.text('Đăng ký →').prop('disabled', false);
+            console.error("Lỗi kết nối:", err);
+            $('#server-error').text("Không thể kết nối đến máy chủ. Vui lòng thử lại sau.").show();
+            btn.text('Hoàn tất').prop('disabled', false);
         }
     });
 });
 
 // 3. Logic Validate từng bước (Giữ nguyên cấu trúc, sửa ID trường Step 3)
-async function nextStep(currentStep) {
+async function validateAndNext(step) {
     let isValid = true;
-     let fieldsToCheck = [];
+    const fields = {
+        1: ['fullName', 'email', 'password', 'confirmPassword'],
+        2: ['age', 'height', 'weight'],
+        3: ['targetWeight'] // Khớp với id="targetWeight" trong HTML
+    };
 
-    if (currentStep === 1) fieldsToCheck = ['fullName', 'email', 'password', 'confirmPassword'];
-    else if (currentStep === 2) fieldsToCheck = ['age', 'height', 'weight'];
-    else if (currentStep === 3) fieldsToCheck = ['targetHeight', 'targetWeight'];
-
-    fieldsToCheck.forEach(id => {
+    fields[step].forEach(id => {
         const el = document.getElementById(id);
-        if (el.value.trim() === '') {
-            el.classList.add('error-border');
+        if (!el || !el.value.trim()) {
+            if(el) el.classList.add('error-border');
             isValid = false;
         } else {
             el.classList.remove('error-border');
         }
     });
 
-     if (isValid && currentStep === 1) {
+    if (isValid && step === 1) {
         const pass = document.getElementById('password').value;
         const cPass = document.getElementById('confirmPassword').value;
         if (pass !== cPass) {
-            document.getElementById('confirmPassword').classList.add('error-border');
             document.getElementById('passError').style.display = 'block';
             isValid = false;
         } else {
@@ -112,28 +105,25 @@ async function nextStep(currentStep) {
         }
 
         if (isValid) {
-            try {
-                const emailVal = document.getElementById('email').value;
-                const check = await fetch(`/api/auth/check-email?email=${encodeURIComponent(emailVal)}`);
-                const data = await check.json();
-                if (data.exists) {
-                    document.getElementById('email').classList.add('error-border');
-                    document.getElementById('emailError').style.display = 'block';
-                    isValid = false;
-                } else {
-                    document.getElementById('emailError').style.display = 'none';
-                }
-            } catch (e) {
-                console.error(e);
+            const email = document.getElementById('email').value;
+            const check = await fetch(`/api/auth/check-email?email=${encodeURIComponent(email)}`);
+            const res = await check.json();
+            if (res.exists) {
+                document.getElementById('emailError').style.display = 'block';
+                isValid = false;
+            } else {
+                document.getElementById('emailError').style.display = 'none';
             }
         }
     }
 
-    if (isValid) changeStep(currentStep, currentStep + 1);
+    if (isValid) changeStep(step, step + 1);
 }
 
 function changeStep(current, next) {
     $(`#step${current}`).hide().removeClass('active');
     $(`#step${next}`).fadeIn().addClass('active');
-    $('#main-container').css('width', next === 1 ? '400px' : '480px');
+    
+    const width = next === 1 ? '400px' : '480px';
+    $('#main-container').css('width', width);
 }

@@ -7,6 +7,6 @@ public class IngredientInFoodDTO {
     private Integer ingredientId;
     private String ingredientName;
 
-    private Double quantity; // từ FoodIngredient
-    private String unit;     // từ FoodIngredient
+    private Double quantity; 
+    private String unit;     
 }

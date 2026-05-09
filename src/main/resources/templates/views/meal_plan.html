@@ -5,10 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Thực đơn - Healthy Food</title>
     <link rel="stylesheet" href="/assets/css/global.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/assets/css/home.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/assets/css/meal_plan.css">
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 </head>
 <body>
     <aside class="sidebar">
@@ -17,7 +16,7 @@
             <div class="brand-text"><h2>Healthy Food</h2><span>Dinh dưỡng thông minh</span></div>
         </div>
         <ul class="nav-menu">
-            <li class="nav-item"><a href="/home" class="nav-link"><i class="fa-solid fa-house"></i> Trang chủ</a></li>
+            <li class="nav-item"><a href="/home" class="nav-link "><i class="fa-solid fa-house"></i> Trang chủ</a></li>
             <li class="nav-item"><a href="/profile" class="nav-link"><i class="fa-regular fa-user"></i> Hồ sơ sức khỏe</a></li>
             <li class="nav-item"><a href="/foods" class="nav-link"><i class="fa-solid fa-utensils"></i> Món ăn</a></li>
             <li class="nav-item"><a href="/meal_plan" class="nav-link active"><i class="fa-regular fa-calendar-days"></i> Thực đơn</a></li>
@@ -32,58 +31,63 @@
     </aside>
 
     <main class="main-content meal-page">
-        <header class="meal-header">
+        <header class="meal-header-top">
             <div>
-                <h1>Thực đơn</h1>
-                <p id="edit-notice">Dữ liệu hiển thị theo ngày bạn chọn.</p>
+                <h1>Lập kế hoạch dinh dưỡng</h1>
+                <p>Chọn món cho tương lai hoặc xác nhận bữa ăn hiện tại.</p>
             </div>
-            <div class="calo-badge"><i class="fa-solid fa-fire-flame-curved"></i> <span id="total-day-calo">0</span> calo</div>
+            <!-- ĐÂY LÀ Ô CALO THỰC TẾ (ĐÃ ĂN) -->
+            <div class="calo-badge-main" title="Tổng calo đã thực sự ăn hôm nay">
+                <i class="fa-solid fa-fire-flame-curved"></i> 
+                Đã nạp: <span id="total-day-calo">0</span> kcal
+            </div>
         </header>
 
-        <!-- Slider chọn ngày -->
-        <section class="card slider-card">
-            <button class="slider-nav" id="prev-week">&lt;</button>
-            <div class="week-track" id="week-slider-container">
-                <!-- JS render slider days here -->
-            </div>
-            <button class="slider-nav" id="next-week">&gt;</button>
-        </section>
-
-        <!-- Bộ lọc ngày -->
-        <section class="card filter-card">
-            <div class="date-form">
-                <label for="date-input">Ngày thực đơn</label>
-                <input id="date-input" type="date">
-                <button id="btn-view-date" class="btn-secondary">Xem</button>
+        <!-- SLIDER CHỌN NGÀY -->
+        <section class="card slider-section">
+            <div class="slider-flex-container">
+                <button class="slider-nav-btn" id="prev-week"><i class="fa-solid fa-chevron-left"></i></button>
+                <div class="week-days-track" id="week-slider-container"></div>
+                <button class="slider-nav-btn" id="next-week"><i class="fa-solid fa-chevron-right"></i></button>
             </div>
         </section>
 
-        <!-- Danh sách bữa ăn -->
-        <section class="meal-list" id="meal-sections-container">
-            <!-- JS render Breakfast, Lunch, Dinner here -->
+        <!-- Ô TỔNG CALO DỰ KIẾN & CẢNH BÁO TDEE -->
+        <section class="planning-summary-card">
+            <div class="planning-info">
+                <span>Tổng calo trong kế hoạch: <strong id="planned-calo">0</strong> / <span id="user-tdee">2000</span> kcal</span>
+                <div class="tdee-progress-bar">
+                    <div id="tdee-progress-fill" style="width: 0%"></div>
+                </div>
+            </div>
+            <p id="tdee-warning" class="warning-text" style="display: none;">⚠️ Kế hoạch hiện tại đã vượt mức TDEE của bạn!</p>
         </section>
+
+        <!-- KHU VỰC 4 BỮA ĂN -->
+        <section class="meal-grid-layout" id="meal-sections-container"></section>
     </main>
 
-    <!-- Modal điều chỉnh món ăn -->
-    <div class="modal" id="adjustModal">
-        <div class="modal-card">
-            <button type="button" class="close-modal"><i class="fa-solid fa-xmark"></i></button>
-            <h3 id="adjustTitle">Điều chỉnh món ăn</h3>
-            <form id="adjustMealForm">
-                <input type="hidden" id="adjustMealTypeId" name="mealTypeId">
-                <div class="form-group">
-                    <label>Chọn món ăn</label>
-                    <select id="adjustFoodIds" name="foodIds" multiple class="searchable-dropdown">
-                        <!-- JS render all food options -->
-                    </select>
-                </div>
-                <button class="btn-save" type="submit"><i class="fa-regular fa-floppy-disk"></i> Lưu thay đổi</button>
-            </form>
+    <!-- MODAL CHỌN MÓN -->
+    <div id="adjustModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="adjustTitle">Thêm món ăn</h3>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="food-tabs">
+                <button class="tab-btn" data-type="0">Món sáng</button>
+                <button class="tab-btn" data-type="1">Mặn</button>
+                <button class="tab-btn" data-type="2">Rau</button>
+                <button class="tab-btn" data-type="3">Canh</button>
+                <button class="tab-btn" data-type="4">Cơm</button>
+                <button class="tab-btn" data-type="5">Tráng miệng</button>
+            </div>
+            <input type="hidden" id="adjustMealTypeId">
+            <div id="food-list-container" class="food-grid"></div>
         </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="/assets/js/user/meal_plan.js"></script>
 </body>
 </html>

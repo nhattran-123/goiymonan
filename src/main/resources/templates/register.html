@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đăng Ký - Hệ thống Sức khỏe</title>
+    <title>Đăng Ký - Healthy Food</title>
     
     <link rel="stylesheet" href="/assets/css/global.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -19,58 +19,128 @@
 </head>
 <body>
 
-    <div class="login-container" id="main-container" style="transition: all 0.3s; width: 400px;">
-    <form id="regForm">
-        <div id="server-error" class="msg error-msg" style="display:none;"></div>
-        <div class="step-container active" id="step1">
-            <div class="brand" style="justify-content: center; margin-bottom: 32px; padding: 0; display: flex; align-items: center; gap: 12px;">
-                <div class="brand-icon" style="background-color: #10b981; width: 45px; height: 45px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px;">
-                    <i class="fa-solid fa-leaf"></i>
+    <div class="login-container" id="main-container" style="transition: all 0.3s; width: 400px; margin: 50px auto;">
+        <form id="regForm">
+            <!-- Vùng hiển thị lỗi tổng quát từ Server -->
+            <div id="server-error" class="msg error-msg" style="display: none;"></div>
+
+            <!-- BƯỚC 1: TÀI KHOẢN -->
+            <div class="step-container active" id="step1">
+                <div class="brand" style="justify-content: center; margin-bottom: 32px; display: flex; align-items: center; gap: 12px;">
+                    <div class="brand-icon" style="background-color: #10b981; width: 45px; height: 45px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px;">
+                        <i class="fa-solid fa-leaf"></i>
+                    </div>
+                </div>
+                <h1 class="login-title">Đăng ký tài khoản</h1>
+                <p class="login-subtitle">Tạo tài khoản mới để bắt đầu hành trình</p>
+
+                <div class="input-group">
+                    <label>Họ và tên</label>
+                    <input type="text" id="fullName" name="fullName" placeholder="Nguyễn Văn A" required>
+                </div>
+                <div class="input-group">
+                    <label>Email</label>
+                    <input type="email" id="email" name="email" placeholder="email@example.com" required>
+                    <div id="emailError" class="error-text">Email đã tồn tại!</div>
+                </div>
+                <div class="input-group">
+                    <label>Mật khẩu</label>
+                    <input type="password" id="password" name="password" placeholder="............" required>
+                </div>
+                <div class="input-group">
+                    <label>Xác nhận mật khẩu</label>
+                    <input type="password" id="confirmPassword" name="confirmPassword" placeholder="............" required>
+                    <div id="passError" class="error-text">Mật khẩu xác nhận không khớp!</div>
+                </div>
+
+                <button type="button" class="btn-login" onclick="validateAndNext(1)">Tiếp tục</button>
+                <div class="register-link">Đã có tài khoản? <a href="/login">Đăng nhập</a></div>
+            </div>
+
+            <!-- BƯỚC 2: CHỈ SỐ CƠ THỂ -->
+            <div class="step-container" id="step2" style="display: none;">
+                <div class="progress-bar"><div class="progress-step active"></div><div class="progress-step active"></div><div class="progress-step"></div><div class="progress-step"></div></div>
+                <h1 class="login-title text-left">Chỉ số cơ thể</h1>
+                <p class="login-subtitle text-left">Cho chúng tôi biết về bạn nhé</p>
+
+                <div class="form-row" style="display: flex; gap: 15px;">
+                    <div class="input-group" style="flex: 1;">
+                        <label>Giới tính</label>
+                        <select id="gender" name="gender" class="form-control">
+                            <option value="Nam">Nam</option>
+                            <option value="Nữ">Nữ</option>
+                        </select>
+                    </div>
+                    <div class="input-group" style="flex: 1;">
+                        <label>Độ tuổi</label>
+                        <input type="number" id="age" name="age" placeholder="25">
+                    </div>
+                </div>
+                <div class="form-row" style="display: flex; gap: 15px;">
+                    <div class="input-group" style="flex: 1;">
+                        <label>Chiều cao (cm)</label>
+                        <input type="number" id="height" name="height" placeholder="170">
+                    </div>
+                    <div class="input-group" style="flex: 1;">
+                        <label>Cân nặng (kg)</label>
+                        <input type="number" id="weight" name="weight" placeholder="65">
+                    </div>
+                </div>
+                <div class="btn-footer" style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn-back" onclick="changeStep(2, 1)" style="flex: 1;">Quay lại</button>
+                    <button type="button" class="btn-next-step" onclick="validateAndNext(2)" style="flex: 1; background: #10b981; color: white; border: none; border-radius: 8px;">Tiếp tục</button>
+                </div>
+            </div>
+
+            <!-- BƯỚC 3: MỤC TIÊU -->
+            <div class="step-container" id="step3" style="display: none;">
+                <div class="progress-bar"><div class="progress-step active"></div><div class="progress-step active"></div><div class="progress-step active"></div><div class="progress-step"></div></div>
+                <h1 class="login-title text-left">Mục tiêu sức khỏe</h1>
+                
+                <div class="input-group">
+                    <label>Cân nặng mục tiêu (kg)</label>
+                    <input type="number" id="targetWeight" name="desiredWeight" placeholder="60">
+                </div>
+                <div class="input-group">
+                    <label>Mục tiêu</label>
+                    <div class="radio-group" style="display: flex; gap: 15px; margin-top: 10px;">
+                        <label><input type="radio" name="goalType" value="Giảm cân"> Giảm cân</label>
+                        <label><input type="radio" name="goalType" value="Duy trì" checked> Duy trì</label>
+                        <label><input type="radio" name="goalType" value="Tăng cân"> Tăng cân</label>
+                    </div>
+                </div>
+                <div class="btn-footer" style="display: flex; gap: 10px; margin-top: 30px;">
+                    <button type="button" class="btn-back" onclick="changeStep(3, 2)" style="flex: 1;">Quay lại</button>
+                    <button type="button" class="btn-next-step" onclick="validateAndNext(3)" style="flex: 1; background: #10b981; color: white; border: none; border-radius: 8px;">Tiếp tục</button>
+                </div>
+            </div>
+
+            <!-- BƯỚC 4: DỊ ỨNG & BỆNH LÝ -->
+            <div class="step-container" id="step4" style="display: none;">
+                <div class="progress-bar"><div class="progress-step active"></div><div class="progress-step active"></div><div class="progress-step active"></div><div class="progress-step active"></div></div>
+                <h1 class="login-title text-left">Dị ứng và bệnh lý</h1>
+                <p class="login-subtitle text-left">Giúp chúng tôi gợi ý món ăn an toàn hơn</p>
+
+                <div class="input-group">
+                    <label>Dị ứng thực phẩm</label>
+                    <select id="allergy-select" name="allergyIds" class="form-control searchable-dropdown" multiple="multiple" style="width: 100%;"></select>
+                </div>
+
+                <div class="input-group" style="margin-top: 20px;">
+                    <label>Bệnh lý đang mắc</label>
+                    <select id="disease-select" name="diseaseIds" class="form-control searchable-dropdown" multiple="multiple" style="width: 100%;"></select>
                 </div>
                 
+                <div class="btn-footer" style="display: flex; gap: 10px; margin-top: 30px;">
+                    <button type="button" class="btn-back" onclick="changeStep(4, 3)" style="flex: 1;">Quay lại</button>
+                    <button type="submit" id="btnSubmit" style="flex: 1; background: #10b981; color: white; border: none; border-radius: 8px; cursor: pointer;">Hoàn tất</button>
+                </div>
             </div>
-            <h1 class="login-title">Đăng ký tài khoản</h1>
-            <p class="login-subtitle">Tạo tài khoản mới để bắt đầu hành trình sức khỏe</p>
-            <div class="input-group"><label>Họ và tên</label><input type="text" id="fullName" name="fullName" placeholder="Nguyễn văn A"></div>
-            <div class="input-group"><label>Email</label><input type="email" id="email" name="email" placeholder="nguyenvana@email.com"><div id="emailError" class="error-text">Email đã tồn tại!</div></div>
-            <div class="input-group"><label>Mật khẩu</label><input type="password" id="password" name="password" placeholder="............"></div>
-            <div class="input-group"><label>Xác nhận mật khẩu</label><input type="password" id="confirmPassword" name="confirmPassword" placeholder="............"><div id="passError" class="error-text">Mật khẩu xác nhận không khớp!</div></div>
-            
-            <button type="button" class="btn-login" onclick="nextStep(1)">Tiếp tục</button>
-            <div class="register-link">Đã có tài khoản? <a href="/login">Đăng nhập</a></div>
-        </div>
-              
-        <div class="step-container" id="step2" style="display:none;">
-            <div class="progress-bar"><div class="progress-step active"></div><div class="progress-step active"></div><div class="progress-step"></div><div class="progress-step"></div></div>
-            <h1 class="login-title text-left">Chỉ số cơ thể</h1>
-            <p class="login-subtitle text-left">Cho chúng tôi biết về bạn nhé</p>
-            <div class="form-row"><div class="input-group"><label>Giới tính</label><select name="gender" class="form-control"><option value="Nam">Nam</option><option value="Nữ">Nữ</option></select></div><div class="input-group"><label>Độ tuổi</label><input type="number" id="age" name="age" placeholder="30"></div></div>
-            <div class="form-row"><div class="input-group"><label>Chiều cao (cm)</label><input type="number" id="height" name="height" placeholder="170"></div><div class="input-group"><label>Cân nặng (kg)</label><input type="number" id="weight" name="weight" placeholder="70"></div></div>
-            <div class="btn-footer"><button type="button" class="btn-back" onclick="changeStep(2,1)">&#8592; Quay lại</button><button type="button" class="btn-next-step" onclick="nextStep(2)">Tiếp tục &#8594;</button></div>
-        </div>
-           
-        <div class="step-container" id="step3" style="display:none;">
-            <div class="progress-bar"><div class="progress-step active"></div><div class="progress-step active"></div><div class="progress-step active"></div><div class="progress-step"></div></div>
-            <h1 class="login-title text-left">Mục tiêu sức khỏe</h1>
-            <p class="login-subtitle text-left">Giúp chúng tôi tính toán chính xác hơn</p>
-            <div class="input-group"><label>Chiều cao mục tiêu (cm)</label><input type="number" id="targetHeight" name="desired_height" placeholder="180"></div>
-            <div class="input-group"><label>Cân nặng mục tiêu (kg)</label><input type="number" id="targetWeight" name="desired_weight" placeholder="65"></div>
-            <div class="input-group"><label>Mục tiêu</label><div class="radio-group"><input type="radio" id="goal1" name="goal" value="Giảm cân"><label for="goal1">Giảm cân</label><input type="radio" id="goal2" name="goal" value="Duy trì" checked><label for="goal2">Duy trì</label><input type="radio" id="goal3" name="goal" value="Tăng cân"><label for="goal3">Tăng cân</label></div></div>
-            <div class="btn-footer"><button type="button" class="btn-back" onclick="changeStep(3,2)">&#8592; Quay lại</button><button type="button" class="btn-next-step" onclick="nextStep(3)">Tiếp tục &#8594;</button></div>
-        </div>
-                
+        </form>
+    </div>
 
-     <div class="step-container" id="step4" style="display:none;">
-            <div class="progress-bar"><div class="progress-step active"></div><div class="progress-step active"></div><div class="progress-step active"></div><div class="progress-step active"></div></div>
-            <h1 class="login-title text-left">Dị ứng và bệnh lý</h1>
-            <p class="login-subtitle text-left">Giúp chúng tôi gợi ý món ăn an toàn hơn (Không bắt buộc)</p>
-            <div class="input-group"><label>Dị ứng thực phẩm (Gõ để tìm kiếm)</label><select name="allergy_id" id="allergy-select" class="form-control searchable-dropdown" multiple="multiple" style="width: 100%;"></select></div>
-            <div class="input-group" style="margin-top:20px;"><label>Bệnh lý (Gõ để tìm kiếm)</label><select name="disease_id" id="disease-select" class="form-control searchable-dropdown" multiple="multiple" style="width: 100%;"></select></div>
-            <div class="btn-footer" style="margin-top:30px;"><button type="button" class="btn-back" onclick="changeStep(4,3)">&#8592; Quay lại</button><button type="submit" class="btn-next-step" id="btnSubmit">Đăng ký &#8594;</button></div>
-        </div>
-    </form>
-</div>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<script src="/assets/js/register.js"></script>
-</body></html>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="/assets/js/register.js"></script>
+</body>
+</html>

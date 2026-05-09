@@ -1,6 +1,5 @@
 package com.example.controller;
 
-import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
@@ -13,11 +12,7 @@ public class WebController {
     }
 
     @GetMapping("/login")
-   public String login(Authentication authentication) {
-        if (authentication != null && authentication.isAuthenticated()
-                && !"anonymousUser".equals(authentication.getName())) {
-            return "redirect:/home";
-        }
+    public String login() {
         return "login";
     }
 

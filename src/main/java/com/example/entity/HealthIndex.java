@@ -21,6 +21,9 @@ public class HealthIndex {
     private float bmr;
     private float tdee;
     
+    @Column(name = "activity_level")
+    private Double activityLevel;
+
     @Column(name = "calculated_at")
     private LocalDateTime calculatedAt = LocalDateTime.now();
 

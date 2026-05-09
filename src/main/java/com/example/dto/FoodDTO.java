@@ -21,6 +21,7 @@ public class FoodDTO {
     private Double carbohydrate;
 
     private Boolean isFavorite; 
+    private Integer foodType;
     
     private List<IngredientInFoodDTO> ingredients;          
 }

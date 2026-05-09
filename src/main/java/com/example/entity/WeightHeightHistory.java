@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -18,8 +19,9 @@ public class WeightHeightHistory {
     @Column(name = "ID")
     private int id;
 
-    @Column(name = "User_id")
-    private Long userId;
+    @ManyToOne
+    @JoinColumn(name = "User_id")
+    private User user;
 
     @Column(name = "Weight")
     private double weight;
@@ -28,5 +30,5 @@ public class WeightHeightHistory {
     private double height;
 
     @Column(name = "record_date")
-    private LocalDateTime recordDate;
+    private LocalDateTime recordedAt;
 }

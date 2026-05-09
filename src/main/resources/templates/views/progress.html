@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/assets/css/home.css">
     <link rel="stylesheet" href="/assets/css/progress.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <aside class="sidebar">
@@ -34,12 +35,11 @@
         <header class="progress-header">
             <div>
                 <h1>Tiến trình</h1>
-                <p>Theo dõi quá trình sức khỏe của bạn.</p>
+                <p>Theo dõi sự thay đổi của cơ thể qua từng giai đoạn.</p>
             </div>
             <button class="btn-update" id="openUpdateModalBtn" type="button">Cập nhật chỉ số</button>
         </header>
 
-        <!-- Thẻ thống kê nhanh -->
         <section class="stats-grid">
             <article class="stat-card">
                 <p class="stat-title">Calo hôm nay</p>
@@ -59,60 +59,45 @@
             </article>
         </section>
 
-        <!-- Tiến độ cân nặng -->
-        <section class="card">
-            <div class="section-head">
-                <h2>Tiến độ đạt mục tiêu cân nặng</h2>
-                <span id="weight-percent">0%</span>
-            </div>
-            <div class="progress-track">
-                <div id="weight-progress-fill" class="progress-fill" style="width: 0%;"></div>
-            </div>
-            <div class="goal-meta">
-                <span id="meta-current-weight">Hiện tại: 0 kg</span>
-                <span id="meta-target-weight">Mục tiêu: 0 kg</span>
-            </div>
-        </section>
+        <div class="charts-grid-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
+            <section class="chart-card" style="background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                <div class="section-head" style="margin-bottom: 15px;">
+                    <h2 style="font-size: 1.1rem; font-weight: 700; color: #1e293b;">
+                        <i class="fa-solid fa-weight-scale" style="color: #10b981; margin-right: 8px;"></i>Biến động Cân nặng
+                    </h2>
+                </div>
+                <div class="chart-body" style="height: 250px;">
+                    <canvas id="weightChart"></canvas>
+                </div>
+            </section>
 
-        <!-- Tiến độ chiều cao -->
-        <section class="card">
-            <div class="section-head">
-                <h2>Tiến độ mục tiêu chiều cao</h2>
-                <span id="height-percent">0%</span>
-            </div>
-            <div class="progress-track">
-                <div id="height-progress-fill" class="progress-fill height-progress-fill" style="width: 0%;"></div>
-            </div>
-            <div class="goal-meta">
-                <span id="meta-current-height">Hiện tại: 0 cm</span>
-                <span id="meta-target-height">Mục tiêu: 0 cm</span>
-            </div>
-        </section>
+            <section class="chart-card" style="background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                <div class="section-head" style="margin-bottom: 15px;">
+                    <h2 style="font-size: 1.1rem; font-weight: 700; color: #1e293b;">
+                        <i class="fa-solid fa-ruler-vertical" style="color: #3b82f6; margin-right: 8px;"></i>Biến động Chiều cao
+                    </h2>
+                </div>
+                <div class="chart-body" style="height: 250px;">
+                    <canvas id="heightChart"></canvas>
+                </div>
+            </section>
+        </div>
             
-        <!-- Lịch sử ăn uống -->
-        <section class="card">
-            <div class="section-head">
-                <h2>Lịch sử ăn uống gần đây</h2>
-                <a href="/meal_plan" class="view-all">Xem tất cả</a>
+        <section class="card" style="margin-top: 20px; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+            <div class="section-head" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="font-size: 1.1rem; font-weight: 700; color: #1e293b;">Lịch sử ăn uống gần đây</h2>
+                <a href="/meal_plan" class="view-all" style="color: #10b981; font-weight: 600; text-decoration: none; font-size: 0.9rem;">Xem tất cả</a>
             </div>
             <div id="history-list" class="history-list">
-                <!-- JS render history items here -->
-            </div>
+                </div>
         </section>
 
-        <section class="card simple-chart">
-            <div class="section-head">
-                <h2>Chỉ số BMI hiện tại</h2>
-            </div>
-            <p id="bmi-display" class="bmi-number">0.00</p>
-        </section>
     </main>
         
-    <!-- Modal Cập nhật chỉ số -->
     <div class="modal-overlay" id="updateModalOverlay">
         <div class="modal-card">
             <div class="modal-head">
-                <h3>Cập nhật chỉ số hiện tại</h3>
+                <h3>Cập nhật chỉ số cơ thể</h3>
                 <button type="button" class="modal-close" id="closeUpdateModalBtn">X</button>
             </div>
             <form id="updateStatsForm">
@@ -125,7 +110,7 @@
                     <input id="inputWeight" type="number" min="1" step="0.1" name="current_weight" required>
                 </div>
                 <button class="btn-save" type="submit">
-                    <i class="fa-regular fa-floppy-disk"></i> Lưu thay đổi
+                    <i class="fa-regular fa-floppy-disk"></i> Lưu và Cập nhật
                 </button>
             </form>
         </div>

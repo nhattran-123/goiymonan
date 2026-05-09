@@ -1,8 +1,6 @@
 package com.example.service;
 
-import com.example.dto.LoginRequest;
-import com.example.dto.ProgressDTO;
-import com.example.dto.UserDTO;
+import com.example.dto.*;
 import com.example.entity.*;
 import com.example.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,7 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.core.Authentication;
 
-import java.util.ArrayList;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,9 +28,14 @@ public class UserService {
     @Autowired private WeightHeightHistoryRepository weightHistoryRepo;
     @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private UserRepository userRepository;
+    @Autowired private UserHistoryRepository userHistoryRepo;
+    @Autowired private DailyMenuRepository dailyMenuRepo;
+    @Autowired private HealthIndexRepository healthIndexRepo;
+    @Autowired private UserGoalRepository userGoalRepo;
+    @Autowired private WeightHeightHistoryRepository historyRepo;
 
     /**
-     * Đăng ký người dùng mới (Dùng chung cho cả AuthRestController)
+     * Đăng ký người dùng mới
      */
     @Transactional
     public boolean registerNewUser(UserDTO dto) {
@@ -53,11 +57,9 @@ public class UserService {
             
             User savedUser = userRepo.save(user);
 
-            // Lưu quan hệ Bệnh lý & Dị ứng
             updateUserDiseases(savedUser, dto.getDiseaseIds());
             updateUserAllergies(savedUser, dto.getAllergyIds());
 
-            // Khởi tạo mục tiêu dinh dưỡng
             UserGoal goal = new UserGoal();
             goal.setUser(savedUser);
             goal.setGoalType(dto.getGoalType() != null ? dto.getGoalType() : "Duy trì");
@@ -70,6 +72,7 @@ public class UserService {
             return false;
         }
     }
+
     public UserDTO getUserFullProfile(Long userId){
         User user = userRepo.findById(userId)
             .orElseThrow(()-> new RuntimeException("Khong tim thay id"));
@@ -84,18 +87,14 @@ public class UserService {
             dto.setDesiredWeight(user.getDesiredWeight());
             dto.setDesiredHeight(user.getDesiredHeight());
             dto.setDiseaseIds(userDiseaseRepo.findByUserId(userId).stream()
-                    .map(ud -> (Integer) ud.getDisease().getDiseaseId()) // Ép kiểu Integer rõ ràng
+                    .map(ud -> (Integer) ud.getDisease().getDiseaseId())
                     .collect(Collectors.toList()));
             dto.setAllergyIds(userAllergyRepo.findByUserId(userId).stream()
                 .map(ua -> (Integer) ua.getIngredient().getIngredientId()).collect(Collectors.toList()));
 
             return dto;
-
     }
 
-    /**
-     * Cập nhật hồ sơ và lưu lịch sử cân nặng
-     */
     @Transactional
     public void updateFullProfile(Long userId, UserDTO dto) {
         User user = userRepo.findById(userId).orElseThrow();
@@ -111,13 +110,9 @@ public class UserService {
         updateUserDiseases(user, dto.getDiseaseIds());
         updateUserAllergies(user, dto.getAllergyIds());
         
-        // Lưu lịch sử biến động (Dùng trực tiếp kiểu Long cho userId)
-        updateWeightHeightHistory(userId, dto.getWeight(), dto.getHeight());
+        updateWeightHeight(userId, dto.getWeight(), dto.getHeight());
     }
 
-    /**
-     * Xử lý đăng nhập
-     */
     public Map<String, Object> authenticate(LoginRequest loginRequest) {
         Map<String, Object> response = new HashMap<>();
         User user = userRepo.findByEmail(loginRequest.getEmail()).orElse(null);
@@ -136,46 +131,91 @@ public class UserService {
         return response;
     }
 
-    /**
-     * Lấy dữ liệu biểu đồ tiến trình
-     */
     public ProgressDTO getProgressSummary(Long userId) {
-
-    User user = userRepo.findById(userId).orElseThrow();
-
+    Integer userIdInt = userId.intValue(); 
+    User user = userRepo.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+    LocalDate today = LocalDate.now();
     ProgressDTO dto = new ProgressDTO();
 
-    float weight = user.getWeight();
-    float height = user.getHeight();
-    float desiredWeight = user.getDesiredWeight();
-    float desiredHeight = user.getDesiredHeight();
+    // --- GIỮ NGUYÊN LOGIC CŨ CỦA THÀNH ---
+    DailyMenu todayMenu = dailyMenuRepo.findByUserIdAndMenuDate(userIdInt, today).orElse(null);
+    dto.setTodayCalories(todayMenu != null ? (float) todayMenu.getTotalCalories() : 0f);
 
-    // BMI
-    float hMeter = height / 100f;
-    float bmi = weight / (hMeter * hMeter);
+    dto.setCurrentWeight(user.getWeight());
+    dto.setCurrentHeight(user.getHeight());
+    dto.setTargetWeight(user.getDesiredWeight());
+    dto.setTargetHeight(user.getDesiredHeight());
 
-    dto.setBmi(bmi);
+    HealthIndex latestHealth = healthIndexRepo.findTopByUser_IdOrderByIdDesc(userIdInt).orElse(null);
+    if (latestHealth != null) {
+        dto.setBmi(latestHealth.getBmi());
+    } else {
+        float hMeter = user.getHeight() / 100f;
+        dto.setBmi(user.getWeight() / (hMeter * hMeter));
+    }
 
-    // Calories demo tạm
-    dto.setTodayCalories(1200f);
+    if (user.getCreateAt() != null) {
+        LocalDate registrationDate = user.getCreateAt();
+        long days = java.time.temporal.ChronoUnit.DAYS.between(registrationDate, today);
+        dto.setTotalDaysFollowed((int) days + 1);
+    } else {
+        dto.setTotalDaysFollowed(1);
+    }
 
-    dto.setCurrentWeight(weight);
-    dto.setCurrentHeight(height);
+    UserGoal goal = userGoalRepo.findTopByUserIdOrderByIdDesc(userId).orElse(null);
+    dto.setGoalLabel(goal != null ? goal.getGoalType() : "Duy trì");
 
-    dto.setTargetWeight(desiredWeight);
-    dto.setTargetHeight(desiredHeight);
+    if (user.getDesiredWeight() > 0) {
+        float weightPercent = (user.getWeight() / user.getDesiredWeight()) * 100f;
+        dto.setWeightProgressPercent(Math.min(weightPercent, 100f));
+    } else {
+        dto.setWeightProgressPercent(0f);
+    }
 
-    dto.setTotalDaysFollowed(30);
+    if (user.getDesiredHeight() > 0) {
+        float heightPercent = (user.getHeight() / user.getDesiredHeight()) * 100f;
+        dto.setHeightProgressPercent(Math.min(heightPercent, 100f));
+    } else {
+        dto.setHeightProgressPercent(0f);
+    }
 
-    dto.setGoalLabel("Đang cải thiện");
+    List<UserHistory> historyList = userHistoryRepo.findTop5ByUserIdOrderByEatenAtDesc(userId);
+    List<HistoryDTO> historyDTOs = historyList.stream().map(h -> {
+        HistoryDTO hDto = new HistoryDTO();
+        if (h.getFood() != null) {
+            hDto.setFoodName(h.getFood().getFoodName());
+            hDto.setImageUrl(h.getFood().getImageUrl());
+            hDto.setCalories(h.getFood().getCalories());
+        }
+        hDto.setEatenAt(h.getEatenAt());
+        return hDto;
+    }).collect(Collectors.toList());
 
-    // Progress weight
-    float weightPercent = (weight / desiredWeight) * 100f;
-    dto.setWeightProgressPercent(Math.min(weightPercent, 100));
+    dto.setRecentHistory(historyDTOs);
 
-    // Progress height
-    float heightPercent = (height / desiredHeight) * 100f;
-    dto.setHeightProgressPercent(Math.min(heightPercent, 100));
+    // --- PHẦN VIẾT THÊM CHO BIỂU ĐỒ ---
+
+    // 1. Lấy dữ liệu lịch sử cân nặng chiều cao từ DB (Lấy 7 hoặc 10 bản ghi gần nhất)
+    // Dùng hàm repository mà Thành đã sửa lỗi recordedAt
+    List<WeightHeightHistory> bodyHistoryEntities = historyRepo.findByUserIdOrderByRecordedAtAsc(userId);
+
+    // 2. Đổ vào list weightHistory trong DTO
+    List<BodyHistoryDTO> weightHistoryDTOs = bodyHistoryEntities.stream().map(bh -> {
+        BodyHistoryDTO bhDto = new BodyHistoryDTO();
+        bhDto.setValue((float) bh.getWeight()); // Lấy cân nặng
+        bhDto.setRecordedAt(bh.getRecordedAt());
+        return bhDto;
+    }).collect(Collectors.toList());
+    dto.setWeightHistory(weightHistoryDTOs);
+
+    // 3. Đổ vào list heightHistory trong DTO
+    List<BodyHistoryDTO> heightHistoryDTOs = bodyHistoryEntities.stream().map(bh -> {
+        BodyHistoryDTO bhDto = new BodyHistoryDTO();
+        bhDto.setValue((float) bh.getHeight()); // Lấy chiều cao
+        bhDto.setRecordedAt(bh.getRecordedAt());
+        return bhDto;
+    }).collect(Collectors.toList());
+    dto.setHeightHistory(heightHistoryDTOs);
 
     return dto;
 }
@@ -199,9 +239,6 @@ public class UserService {
         return res;
     }
 
-    /**
-     * Lấy thông tin cài đặt (Settings)
-     */
     public Map<String, Object> getSettingsProfile(Long userId) {
         Map<String, Object> response = new HashMap<>();
         User user = userRepo.findById(userId).orElse(null);
@@ -222,27 +259,40 @@ public class UserService {
         return response;
     }
 
-    @Transactional
-    public void updateWeightHeight(Long userId, Float weight, Float height) {
-        User user = userRepo.findById(userId).orElseThrow();
-        user.setWeight(weight);
-        user.setHeight(height);
-        userRepo.save(user);
-        updateWeightHeightHistory(userId, weight, height);
-    }
-
     public boolean existsByEmail(String email) {
         return userRepo.existsByEmail(email);
     }
 
-    // --- PRIVATE HELPER METHODS ---
+    /**
+     * Cập nhật chỉ số cơ thể hiện tại và lưu lịch sử
+     */
+    @Transactional
+    public void updateWeightHeight(Long userId, float newWeight, float newHeight) {
+        User user = userRepo.findById(userId)
+            .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+        
+        user.setWeight(newWeight);
+        user.setHeight(newHeight);
+        userRepo.save(user);
 
-    private void updateWeightHeightHistory(Long userId, Float weight, Float height) {
         WeightHeightHistory history = new WeightHeightHistory();
-        history.setUserId(userId);
-        history.setWeight(weight);
-        history.setHeight(height);
-        weightHistoryRepo.save(history);
+        history.setUser(user);
+        history.setWeight(newWeight);
+        history.setHeight(newHeight);
+        
+        // Kiểm tra Entity WeightHeightHistory của Thành: 
+        // Nếu biến là record_date thì sửa thành setRecord_date
+        history.setRecordedAt(LocalDateTime.now()); 
+        
+        historyRepo.save(history);
+    }
+
+    /**
+     * Hàm hỗ trợ cập nhật chỉ số từ Controller (Dùng DTO)
+     */
+    @Transactional
+    public void updateBodyStats(Long userId, UpdateStatsRequest request) {
+        updateWeightHeight(userId, request.getWeight(), request.getHeight());
     }
 
     private void updateUserDiseases(User user, List<Integer> diseaseIds) {
@@ -278,9 +328,7 @@ public class UserService {
         if ("Tăng cân".equalsIgnoreCase(dto.getGoalType())) return tdee + 300;
         return tdee;
     }
-    /**
-     * Cập nhật thông tin cá nhân cơ bản (Họ tên và Email)
-     */
+
     @Transactional
     public Map<String, Object> updatePersonalSettings(Long userId, String fullName, String email) {
         Map<String, Object> res = new HashMap<>();
@@ -299,13 +347,9 @@ public class UserService {
         return res;
     }
 
-    /**
-     * Cập nhật mục tiêu dinh dưỡng vào bảng UserGoal thật
-     */
     @Transactional
     public Map<String, Object> updateNutritionGoal(Long userId, String goalType, Object targetCalories) {
         Map<String, Object> res = new HashMap<>();
-        // Lấy mục tiêu mới nhất của Thành để cập nhật
         UserGoal goal = goalRepo.findTopByUserIdOrderByIdDesc(userId).orElse(new UserGoal());
         
         if (goal.getUser() == null) {
@@ -314,7 +358,6 @@ public class UserService {
         }
         
         goal.setGoalType(goalType);
-        // Chuyển đổi Object sang Float để khớp với Entity UserGoal của Thành
         goal.setTargetCalories(Float.parseFloat(targetCalories.toString()));
         
         goalRepo.save(goal);
@@ -325,9 +368,7 @@ public class UserService {
     }
 
     public UserDTO getCurrentUser(Authentication authentication) {
-
         String email = authentication.getName();
-
         User user = userRepository.findByEmail(email)
             .orElseThrow(() -> new RuntimeException("Không tìm thấy user"));
 

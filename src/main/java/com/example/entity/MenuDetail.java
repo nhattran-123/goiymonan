@@ -22,4 +22,7 @@ public class MenuDetail {
 
     @Column(name = "Meal_type_id")
     private Integer mealTypeId;
+
+    @Column(name = "Is_confirmed")
+    private Boolean isConfirmed = false;
 }

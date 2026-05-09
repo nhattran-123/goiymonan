@@ -1,7 +1,6 @@
 package com.example.service;
 
-import com.example.dto.HomeSummaryDTO;
-import com.example.dto.UserDTO;
+import com.example.dto.*;
 import com.example.entity.*;
 import com.example.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,9 +8,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeParseException;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.*;
-import java.time.format.TextStyle;
 import java.util.stream.Collectors;
 
 @Service
@@ -22,257 +21,204 @@ public class MealPlanService {
     @Autowired private FoodRepository foodRepo;
     @Autowired private UserRepository userRepo;
     @Autowired private UserGoalRepository userGoalRepo;
+    @Autowired private HealthIndexRepository healthIndexRepo;
     @Autowired private RecommendationService recommendationService;
     @Autowired private UserService userService;
-    @Autowired private MealTypeRepository mealTypeRepo;
+    @Autowired private UserHistoryRepository userHistoryRepo;
 
-    // 1. Hàm thêm món ăn (Giữ nguyên logic của bạn)[cite: 9, 17]
-    @Transactional
-    public void addFoodToMenu(Long userId, LocalDate date, Integer mealTypeId, Integer foodId) {
-        DailyMenu menu = dailyMenuRepo.findByUserIdAndMenuDate(userId.intValue(), date)
-            .orElseGet(() -> {
-                DailyMenu newMenu = new DailyMenu();
-                newMenu.setUserId(userId.intValue());
-                newMenu.setMenuDate(date);
-                newMenu.setStatus("Pending");
-                return dailyMenuRepo.save(newMenu);
-            });
-
-        MenuDetail detail = new MenuDetail();
-        detail.setMenuId(menu.getMenuId());
-        detail.setFoodId(foodId);
-        detail.setMealTypeId(mealTypeId);
-        menuDetailRepo.save(detail);
-
-        updateTotalCalories(menu);
-    }
-
-    // 2. Hàm lấy dữ liệu trang chủ (home.js)[cite: 16]
-
+    /**
+     * 1. Lấy dữ liệu tổng hợp cho Trang chủ (Dashboard)
+     * Trả về thông tin chỉ số cơ thể và 4 thẻ bữa ăn kèm ảnh món ăn
+     */
     public HomeSummaryDTO getHomeDashboardData(Long userId) {
-
         User user = userRepo.findById(userId).orElse(null);
-       
+        if (user == null) return new HomeSummaryDTO();
+
         UserDTO userDTO = userService.getUserFullProfile(user.getId());
         HomeSummaryDTO dto = new HomeSummaryDTO();
-
-        if (user == null) {
-            return dto;
-        }
-
         dto.setName(user.getName());
 
-        float bmi = (float) (user.getWeight() / Math.pow(user.getHeight() / 100.0, 2));
+        // Tính toán BMI
+        float weight = user.getWeight();
+        float height = user.getHeight();
+        float bmi = (float) (weight / Math.pow(height / 100.0, 2));
         dto.setBmi(bmi);
         dto.setBmiStatus(getBMIStatus(bmi));
 
-        float bmr = (float) (
-            (10 * user.getWeight())
-            + (6.25 * user.getHeight())
-            - (5 * user.getAge())
-        );
-  
-        bmr = (user.getGender() != null && user.getGender())
-                ? bmr + 5
-                : bmr - 161;
-
+        // Tính toán BMR
+        float bmr = (float) ((10 * weight) + (6.25 * height) - (5 * (user.getAge() != null ? user.getAge() : 0)));
+        bmr = (user.getGender() != null && user.getGender()) ? bmr + 5 : bmr - 161;
         dto.setBmr(bmr);
 
-        UserGoal goal = userGoalRepo
-            .findTopByUserIdOrderByIdDesc(userId)
-            .orElse(null);
+        // Lấy mục tiêu
+        UserGoal goal = userGoalRepo.findTopByUserIdOrderByIdDesc(userId).orElse(null);
+        dto.setGoalType(goal != null ? goal.getGoalType() : "Duy trì");
 
-        if (goal != null) {
-            dto.setGoalType(goal.getGoalType());
-        } else {
-            dto.setGoalType("Duy trì");
-      }
+        // Xử lý dữ liệu 4 thẻ bữa ăn hôm nay
+        DailyMenu todayMenu = dailyMenuRepo.findByUserIdAndMenuDate(userId.intValue(), LocalDate.now()).orElse(null);
+        float todayCalories = 0f;
+        List<TodayMealDTO> todayMealList = new ArrayList<>();
 
-    // Calo hôm nay
-         DailyMenu todayMenu = dailyMenuRepo
-            .findByUserIdAndMenuDate(userId.intValue(), LocalDate.now())
-            .orElse(null);
+        if (todayMenu != null) {
+            dto.setMenuId(todayMenu.getMenuId());
+            List<MenuDetail> details = menuDetailRepo.findByMenuId(todayMenu.getMenuId());
 
-        float todayCalories = todayMenu != null
-            ? (float) todayMenu.getTotalCalories()
-            : 0f;
+            // Gom nhóm món ăn theo mealTypeId
+            Map<Integer, List<MenuDetail>> groupedMeals = details.stream()
+                    .filter(d -> d.getMealTypeId() != null)
+                    .collect(Collectors.groupingBy(MenuDetail::getMealTypeId));
 
-         float targetCalories = goal != null ? goal.getTargetCalories() : bmr * 1.2f;
-        float remainCalories = Math.max(0f, targetCalories - todayCalories);
+            for (int typeId = 1; typeId <= 4; typeId++) {
+                List<MenuDetail> items = groupedMeals.getOrDefault(typeId, new ArrayList<>());
+                
+                TodayMealDTO mealDto = new TodayMealDTO();
+                mealDto.setMealTypeId(typeId);
+                mealDto.setMealName(getMealName(typeId));
 
+                // Map sang FoodDTO để lấy ảnh thumbnail cho Dashboard
+                List<FoodDTO> foodInMeal = items.stream()
+                        .map(i -> foodRepo.findById(i.getFoodId()).map(this::mapToFoodDTO).orElse(null))
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toList());
+
+                mealDto.setFoods(foodInMeal);
+
+                // Tính tổng calo bữa này
+                float mealTotalCalo = (float) foodInMeal.stream().mapToDouble(FoodDTO::getCalories).sum();
+                mealDto.setTotalCalories(mealTotalCalo);
+
+                // Trạng thái đã xác nhận ăn hay chưa
+                boolean isConfirmed = items.stream().anyMatch(d -> Boolean.TRUE.equals(d.getIsConfirmed()));
+                mealDto.setConfirmed(isConfirmed);
+
+                todayMealList.add(mealDto);
+            }
+            todayCalories = (float) todayMenu.getTotalCalories();
+        }
+
+        // TDEE/Target Calo
+        float targetCalories = bmr * 1.2f; 
         dto.setTodayCalories(todayCalories);
         dto.setTargetCalories(targetCalories);
-        dto.setRemainCalories(remainCalories);
+        dto.setRemainCalories(targetCalories - todayCalories);
+        dto.setTodayMeals(todayMealList);
+        dto.setHomeSuggestions(recommendationService.getSuggestedFoodsWithMeta(userDTO));
 
-    
-        dto.setTodayMeals(buildTodayMeals(todayMenu));
-
-        dto.setHomeSuggestions(
-            recommendationService.getSuggestedFoodsWithMeta(userDTO)
-        );
-
-         return dto;
-    }
-    private List<com.example.dto.TodayMealDTO> buildTodayMeals(DailyMenu todayMenu) {
-        if (todayMenu == null) {
-            return new ArrayList<>();
-        }
-
-        List<MenuDetail> details = menuDetailRepo.findByMenuId(todayMenu.getMenuId());
-        if (details.isEmpty()) {
-            return new ArrayList<>();
-        }
-
-        Map<Integer, List<MenuDetail>> groupedByMealType = details.stream()
-                .collect(Collectors.groupingBy(MenuDetail::getMealTypeId, TreeMap::new, Collectors.toList()));
-
-        List<com.example.dto.TodayMealDTO> meals = new ArrayList<>();
-        for (Map.Entry<Integer, List<MenuDetail>> entry : groupedByMealType.entrySet()) {
-            com.example.dto.TodayMealDTO meal = new com.example.dto.TodayMealDTO();
-            Integer mealTypeId = entry.getKey();
-            List<MenuDetail> mealDetails = entry.getValue();
-
-            meal.setMealName(resolveMealName(mealTypeId));
-            meal.setTotalFoods(mealDetails.size());
-
-            float totalCalories = 0f;
-            for (MenuDetail detail : mealDetails) {
-                totalCalories += foodRepo.findById(detail.getFoodId())
-                        .map(food -> food.getCalories().floatValue())
-                        .orElse(0f);
-            }
-            meal.setTotalCalories(totalCalories);
-            meals.add(meal);
-        }
-
-        return meals;
+        return dto;
     }
 
-    private String resolveMealName(Integer mealTypeId) {
-        return switch (mealTypeId) {
+    /**
+     * 2. Lấy thông tin thực đơn chi tiết của một ngày (Trang Meal Plan)
+     */
+    public MealPlanDTO getMealPlan(Integer userId, LocalDate date) {
+        MealPlanDTO dto = new MealPlanDTO();
+
+        HealthIndex hi = healthIndexRepo.findTopByUser_IdOrderByIdDesc(userId).orElse(null);
+        dto.setTargetCalories(hi != null ? (double) hi.getTdee() : 2000.0);
+
+        DailyMenu menu = dailyMenuRepo.findByUserIdAndMenuDate(userId, date)
+                .orElseGet(() -> {
+                    DailyMenu newMenu = new DailyMenu();
+                    newMenu.setUserId(userId);
+                    newMenu.setMenuDate(date);
+                    newMenu.setTotalCalories(0.0);
+                    newMenu.setStatus("IN_PROGRESS");
+                    return dailyMenuRepo.save(newMenu);
+                });
+
+        dto.setMenuId(menu.getMenuId());
+        dto.setTotalConsumedCalories(menu.getTotalCalories());
+
+        List<MenuDetail> details = menuDetailRepo.findByMenuId(menu.getMenuId());
+        List<MealSectionDTO> sections = new ArrayList<>();
+
+        for (int i = 1; i <= 4; i++) {
+            final int currentMealTypeId = i;
+            MealSectionDTO section = new MealSectionDTO();
+            section.setMealTypeId(currentMealTypeId);
+            
+            List<MenuDetail> detailsInMeal = details.stream()
+                .filter(d -> d.getMealTypeId() != null && d.getMealTypeId().intValue() == currentMealTypeId)
+                .collect(Collectors.toList());
+
+            List<FoodDTO> foodsInMeal = detailsInMeal.stream()
+                .map(d -> foodRepo.findById(d.getFoodId()).map(this::mapToFoodDTO).orElse(null))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+            section.setFoods(foodsInMeal);
+            section.setConfirmed(detailsInMeal.stream().anyMatch(d -> Boolean.TRUE.equals(d.getIsConfirmed())));
+            sections.add(section);
+        }
+        
+        dto.setSections(sections);
+        return dto;
+    }
+
+    /**
+     * 3. Lưu kế hoạch ăn uống (Batch Save)
+     */
+    @Transactional
+    public void saveMealSession(MealSaveRequest request) {
+        menuDetailRepo.deleteByMenuIdAndMealTypeId(request.getMenuId(), request.getMealTypeId());
+
+        if (request.getItems() != null && !request.getItems().isEmpty()) {
+            List<MenuDetail> details = request.getItems().stream().map(item -> {
+                MenuDetail detail = new MenuDetail();
+                detail.setMenuId(request.getMenuId());
+                detail.setMealTypeId(request.getMealTypeId());
+                detail.setFoodId(item.getFoodId());
+                detail.setIsConfirmed(false);
+                return detail;
+            }).collect(Collectors.toList());
+            
+            menuDetailRepo.saveAll(details);
+            menuDetailRepo.flush();
+        }
+    }
+
+    /**
+     * 4. Xác nhận đã ăn (Confirm Meal)
+     */
+    @Transactional
+    public void confirmMeal(Integer userId, MealConfirmRequest request) {
+        LocalDate selectedDate = LocalDate.parse(request.getSelectedDate());
+        
+        List<MenuDetail> details = menuDetailRepo.findByMenuIdAndMealTypeId(request.getMenuId(), request.getMealTypeId());
+        double totalMealCalories = 0;
+
+        for (MenuDetail detail : details) {
+            if (Boolean.TRUE.equals(detail.getIsConfirmed())) continue;
+
+            detail.setIsConfirmed(true);
+            
+            // Lưu lịch sử
+            UserHistory history = new UserHistory();
+            history.setUser(userRepo.findById(userId.longValue()).orElse(null));
+            Food food = foodRepo.findById(detail.getFoodId()).orElse(null);
+            history.setFood(food);
+            history.setEatenAt(LocalDateTime.now());
+            userHistoryRepo.save(history);
+
+            if (food != null) totalMealCalories += food.getCalories();
+        }
+        menuDetailRepo.saveAll(details);
+
+        DailyMenu menu = dailyMenuRepo.findById(request.getMenuId()).orElseThrow();
+        menu.setTotalCalories(menu.getTotalCalories() + totalMealCalories);
+        dailyMenuRepo.save(menu);
+    }
+
+    // --- CÁC HÀM BỔ TRỢ ---
+
+    private String getMealName(int typeId) {
+        return switch (typeId) {
             case 1 -> "Bữa sáng";
             case 2 -> "Bữa trưa";
             case 3 -> "Bữa tối";
             case 4 -> "Bữa phụ";
-            default -> "Bữa " + mealTypeId;
+            default -> "Khác";
         };
-    }
-    // 3. Hàm lấy thực đơn chi tiết (meal_plan.js)
-    public Map<String, Object> getDailyMealPlan(Long userId, String dateStr) {
-         LocalDate date = parseSelectedDate(dateStr);
-        DailyMenu menu = dailyMenuRepo.findByUserIdAndMenuDate(userId.intValue(), date).orElse(null);
-        
-        Map<String, Object> res = new HashMap<>();
-        res.put("totalCalories", (menu != null) ? menu.getTotalCalories() : 0.0);
-        res.put("canEdit", !date.isBefore(LocalDate.now()));
-        
-        res.put("weekSlider", buildWeekSlider(userId, date));
-        
-        // Trả về các bữa ăn (Sáng, Trưa, Tối...)[cite: 17]
-        res.put("mealSections", getMealSections(menu));
-        
-        return res;
-    }
-     private LocalDate parseSelectedDate(String dateStr) {
-        if (dateStr == null || dateStr.trim().isEmpty()) {
-            return LocalDate.now();
-        }
-        try {
-            return LocalDate.parse(dateStr);
-        } catch (DateTimeParseException ex) {
-            return LocalDate.now();
-        }
-    }
-    public List<Map<String, Object>> getAllFoodsSimple() {
-        return foodRepo.findAll().stream().map(food -> {
-            Map<String, Object> f = new HashMap<>();
-            f.put("id", food.getFoodId());
-            f.put("name", food.getFoodName());
-            f.put("calories", food.getCalories() == null ? 0.0 : food.getCalories());
-            return f;
-        }).collect(Collectors.toList());
-    }
-
-    @Transactional
-    public void removeMealDetail(Long userId, Integer detailId) {
-        MenuDetail detail = menuDetailRepo.findById(detailId).orElse(null);
-        if (detail == null) return;
-        DailyMenu menu = dailyMenuRepo.findById(detail.getMenuId()).orElse(null);
-        if (menu == null || menu.getUserId() != userId.intValue()) return;
-        menuDetailRepo.deleteByDetailId(detailId);
-        updateTotalCalories(menu);
-    }
-
-    // 4. Hàm điều chỉnh món ăn trong bữa (Nâng cao từ addFoodToMenu)[cite: 17]
-    @Transactional
-    public void updateUserMeal(Long userId, Map<String, Object> payload) {
-         if (payload == null) {
-            throw new IllegalArgumentException("Dữ liệu cập nhật không hợp lệ.");
-        }
-        LocalDate date = LocalDate.parse((String) payload.get("date"));
-        Integer mealTypeId = Integer.valueOf(payload.get("mealTypeId").toString());
-        boolean mealTypeExists = mealTypeRepo.existsById(mealTypeId);
-        if (!mealTypeExists) {
-            throw new IllegalArgumentException("Meal type không tồn tại: " + mealTypeId);
-        }
-         Object rawFoodIds = payload.get("foodIds");
-        if (!(rawFoodIds instanceof List<?> foodIdList)) {
-            throw new IllegalArgumentException("Danh sách món ăn không hợp lệ.");
-        }
-
-        List<Integer> foodIds = foodIdList.stream()
-                .map(v -> Integer.valueOf(v.toString()))
-                .collect(Collectors.toList());
-        if (foodIds.isEmpty()) {
-            throw new IllegalArgumentException("Vui lòng chọn ít nhất 1 món ăn.");
-        }
-        DailyMenu menu = dailyMenuRepo.findByUserIdAndMenuDate(userId.intValue(), date)
-            .orElseGet(() -> {
-                DailyMenu nm = new DailyMenu();
-                nm.setUserId(userId.intValue());
-                nm.setMenuDate(date);
-                nm.setStatus("Pending");
-                return dailyMenuRepo.save(nm);
-            });
-
-        // Xóa món cũ trong bữa đó để ghi đè món mới[cite: 17]
-        menuDetailRepo.deleteByMenuIdAndMealTypeId(menu.getMenuId(), mealTypeId);
-
-        for (Integer fId : foodIds) {
-            MenuDetail d = new MenuDetail();
-            d.setMenuId(menu.getMenuId());
-            d.setFoodId(fId);
-            d.setMealTypeId(mealTypeId);
-            menuDetailRepo.save(d);
-        }
-
-        updateTotalCalories(menu);
-    }
-    private List<Map<String, Object>> buildWeekSlider(Long userId, LocalDate selectedDate) {
-        LocalDate start = selectedDate.minusDays(3);
-        List<Map<String, Object>> days = new ArrayList<>();
-        for (int i = 0; i < 7; i++) {
-            LocalDate d = start.plusDays(i);
-            Map<String, Object> item = new HashMap<>();
-            item.put("date", d.toString());
-            item.put("dow", d.getDayOfWeek().getDisplayName(TextStyle.SHORT, new Locale("vi", "VN")));
-            item.put("day", d.getDayOfMonth());
-            item.put("selected", d.equals(selectedDate));
-            item.put("hasMeals", dailyMenuRepo.findByUserIdAndMenuDate(userId.intValue(), d).isPresent());
-            days.add(item);
-        }
-        return days;
-    }
-
-    // --- HÀM BỔ TRỢ (PRIVATE) ---
-
-    private void updateTotalCalories(DailyMenu menu) {
-        List<MenuDetail> details = menuDetailRepo.findByMenuId(menu.getMenuId());
-        double total = details.stream()
-            .mapToDouble(d -> foodRepo.findById(d.getFoodId()).map(Food::getCalories).orElse(0.0))
-            .sum();
-        menu.setTotalCalories(total);
-        dailyMenuRepo.save(menu);
     }
 
     private String getBMIStatus(double bmi) {
@@ -281,44 +227,16 @@ public class MealPlanService {
         return "Thừa cân";
     }
 
-    private List<Map<String, Object>> getMealSections(DailyMenu menu) {
-        
-        List<Map<String, Object>> sections = new ArrayList<>();
-        List<MealType> mealTypes = mealTypeRepo.findAllByOrderByMealTypeIdAsc();
-        Map<Integer, List<MenuDetail>> grouped = new HashMap<>();
-        if (menu != null) {
-            grouped = menuDetailRepo.findByMenuId(menu.getMenuId()).stream()
-                    .collect(Collectors.groupingBy(MenuDetail::getMealTypeId));
-        }
-
-       for (MealType mt : mealTypes) {
-            Integer mealTypeId = mt.getMealTypeId();
-            List<MenuDetail> details = grouped.getOrDefault(mealTypeId, new ArrayList<>());
-            List<Map<String, Object>> foods = new ArrayList<>();
-            double usedCalories = 0.0;
-            List<String> foodIds = new ArrayList<>();
-            for (MenuDetail d : details) {
-                Food f = foodRepo.findById(d.getFoodId()).orElse(null);
-                if (f == null) continue;
-                Map<String, Object> item = new HashMap<>();
-                item.put("detailId", d.getDetailId());
-                item.put("foodId", f.getFoodId());
-                item.put("foodName", f.getFoodName());
-                item.put("imageUrl", f.getImageUrl());
-                item.put("calories", f.getCalories() == null ? 0.0 : f.getCalories());
-                foods.add(item);
-                usedCalories += f.getCalories() == null ? 0.0 : f.getCalories();
-                foodIds.add(String.valueOf(f.getFoodId()));
-            }
-            Map<String, Object> section = new HashMap<>();
-            section.put("mealTypeId", mealTypeId);
-            section.put("mealName", mt.getMealName());
-            section.put("foods", foods);
-            section.put("usedCalories", usedCalories);
-           section.put("targetCalories", mt.getTargetCalories() == null ? 0.0 : mt.getTargetCalories());
-            section.put("foodIdsString", String.join(",", foodIds));
-            sections.add(section);
-        }
-        return sections;
+    private FoodDTO mapToFoodDTO(Food f) {
+        FoodDTO d = new FoodDTO();
+        d.setFoodId(f.getFoodId());
+        d.setFoodName(f.getFoodName());
+        d.setImageUrl(f.getImageUrl());
+        d.setCalories(f.getCalories());
+        d.setProtein(f.getProtein());
+        d.setFat(f.getFat());
+        d.setCarbohydrate(f.getCarbohydrate());
+        d.setFoodType(f.getFoodType());
+        return d;
     }
 }
