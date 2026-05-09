@@ -1,4 +1,7 @@
 document.addEventListener("DOMContentLoaded", function() {
+     window.currentPage = 1;
+    window.pageSize = 10;
+    window.maxVisiblePages = 5;
     fetchFoods();
 
     // Lắng nghe sự kiện tìm kiếm
@@ -8,13 +11,15 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 let allFoods = []; // Lưu trữ danh sách gốc để tìm kiếm nhanh
+let filteredFoods = [];
 
 // 1. Lấy danh sách món ăn từ API
 async function fetchFoods() {
     try {
         const response = await fetch('/api/admin/foods');
         allFoods = await response.json();
-        renderFoodTable(allFoods);
+        filteredFoods = [...allFoods];
+        renderCurrentPage();
     } catch (error) {
         console.error("Lỗi tải danh sách món ăn:", error);
     }
@@ -50,13 +55,58 @@ function renderFoodTable(foods) {
         </tr>
     `).join('');
 }
+function renderCurrentPage() {
+    const totalPages = Math.max(1, Math.ceil(filteredFoods.length / pageSize));
+    if (currentPage > totalPages) currentPage = totalPages;
+    const start = (currentPage - 1) * pageSize;
+    const end = start + pageSize;
+    renderFoodTable(filteredFoods.slice(start, end));
+    renderPagination(totalPages);
+}
+
+function renderPagination(totalPages) {
+    const paginationEl = document.getElementById('food-pagination');
+    if (!paginationEl) return;
+
+    if (filteredFoods.length === 0 || totalPages <= 1) {
+        paginationEl.innerHTML = '';
+        return;
+    }
+
+    const half = Math.floor(maxVisiblePages / 2);
+    let startPage = Math.max(1, currentPage - half);
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    startPage = Math.max(1, endPage - maxVisiblePages + 1);
+
+    let html = `
+        <button class="page-btn" ${currentPage === 1 ? 'disabled' : ''} onclick="goToPage(${currentPage - 1})">&laquo;</button>
+    `;
+
+    for (let p = startPage; p <= endPage; p++) {
+        html += `<button class="page-btn ${p === currentPage ? 'active' : ''}" onclick="goToPage(${p})">${p}</button>`;
+    }
+
+    html += `
+        <button class="page-btn" ${currentPage === totalPages ? 'disabled' : ''} onclick="goToPage(${currentPage + 1})">&raquo;</button>
+    `;
+    paginationEl.innerHTML = html;
+}
+
+function goToPage(page) {
+    const totalPages = Math.max(1, Math.ceil(filteredFoods.length / pageSize));
+    currentPage = Math.min(Math.max(page, 1), totalPages);
+    renderCurrentPage();
+}
+
+window.goToPage = goToPage;
 
 // 3. Xử lý tìm kiếm (Client-side filter)
 function filterFoods(keyword) {
-    const filtered = allFoods.filter(f => 
+    filteredFoods = allFoods.filter(f =>  
         f.foodName.toLowerCase().includes(keyword.toLowerCase())
     );
-    renderFoodTable(filtered);
+   currentPage = 1;
+    renderCurrentPage();
 }
 
 // 4. Logic Modal Xóa

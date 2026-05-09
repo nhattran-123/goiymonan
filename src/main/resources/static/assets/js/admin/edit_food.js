@@ -36,15 +36,16 @@ $(document).ready(function() {
 
     // 2. Đổ dữ liệu vào Form
     function fillFoodData(data) {
-        $('#foodId').val(data.id);
-        $('#foodName').val(data.name);
+       $('#foodId').val(data.foodId ?? data.id ?? '');
+        $('#foodName').val(data.foodName ?? data.name ?? '');
         $('#description').val(data.description);
         $('#recipe').val(data.recipe);
          $('#foodType').val(data.foodType ?? '');
         $('#imagePreview').attr('src', data.imageUrl || '/assets/images/default-food.png');
 
         // Đổ danh sách nguyên liệu đã có
-        data.ingredients.forEach(item => {
+       const ingredients = Array.isArray(data.ingredients) ? data.ingredients : [];
+        ingredients.forEach(item => {
             addRowWithData(item.ingredientId, item.quantity, item.unit);
         });
         
