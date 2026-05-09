@@ -2,43 +2,48 @@ document.addEventListener("DOMContentLoaded", function() {
     Chart.register(ChartDataLabels);
     loadDashboardData();
 });
+let loginChartInstance;
+let registerChartInstance;
 
 async function loadDashboardData() {
     try {
         const response = await fetch('/api/admin/dashboard-summary');
-        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+       const data = await response.json();
 
-        // 1. Cập nhật thông tin chào hỏi
-        document.getElementById('admin-name').innerText = data.name || 'Admin';
-
-        // 2. Đổ dữ liệu vào các thẻ Stats
-        updateStatCard('total-users', 'user-growth-val', 'user-growth-container', data.totalUsers, data.userGrowth);
-        updateStatCard('total-foods', 'food-growth-val', 'food-growth-container', data.totalFoods, data.foodGrowth);
-        updateStatCard('total-menus', 'menu-growth-val', 'menu-growth-container', data.totalMenus, data.menuGrowth);
-        document.getElementById('today-activities').innerText = data.todayActivities.toLocaleString();
-
-        // 3. Vẽ biểu đồ đăng nhập (Line Chart)
-        renderLoginChart(data.chartLabels, data.chartData);
-
-        // 4. Vẽ biểu đồ đăng ký (Bar Chart)
-        renderRegisterChart(data.userChartData);
+         document.getElementById('admin-name').innerText = data?.name || 'Admin';
 
         // 5. Render Top món ăn
-        renderTopFoods(data.topFoods);
+        updateStatCard('total-users', 'user-growth-val', 'user-growth-container', data?.totalUsers, data?.userGrowth);
+        updateStatCard('total-foods', 'food-growth-val', 'food-growth-container', data?.totalFoods, data?.foodGrowth);
+        updateStatCard('total-menus', 'menu-growth-val', 'menu-growth-container', data?.totalMenus, data?.menuGrowth);
+        document.getElementById('today-activities').innerText = formatNumber(data?.todayActivities);
 
-        // 6. Render Mục tiêu phổ biến
-        renderPopularGoals(data.popularGoals);
+        renderLoginChart(data?.chartLabels || [], data?.chartData || []);
+        renderRegisterChart(data?.userChartData || []);
+        renderTopFoods(data?.topFoods || {});
+        renderPopularGoals(data?.popularGoals || {});
+
 
     } catch (error) {
         console.error("Lỗi tải dashboard:", error);
     }
 }
+function formatNumber(value) {
+    return Number.isFinite(Number(value)) ? Number(value).toLocaleString() : '0';
+}
+
 
 function updateStatCard(idVal, idGrowth, idContainer, value, growth) {
-    document.getElementById(idVal).innerText = value.toLocaleString();
+    const safeValue = Number(value) || 0;
+    const safeGrowth = Number.isFinite(Number(growth)) ? Number(growth) : 0;
+
+    document.getElementById(idVal).innerText = safeValue.toLocaleString();
     const growthElem = document.getElementById(idGrowth);
-    growthElem.innerText = (growth >= 0 ? "+" : "") + growth.toFixed(1) + "%";
-    document.getElementById(idContainer).style.color = growth >= 0 ? "#10b981" : "#dc2626";
+    growthElem.innerText = (safeGrowth >= 0 ? "+" : "") + safeGrowth.toFixed(1) + "%";
+    document.getElementById(idContainer).style.color = safeGrowth >= 0 ? "#10b981" : "#dc2626";
 }
 
 function renderLoginChart(labels, dataValues) {
@@ -47,13 +52,17 @@ function renderLoginChart(labels, dataValues) {
     gradient.addColorStop(0, 'rgba(16, 185, 129, 0.4)');
     gradient.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
 
-    new Chart(ctx, {
+    if (loginChartInstance) {
+        loginChartInstance.destroy();
+    }
+
+    loginChartInstance = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: labels || [],
+            labels: labels ,
             datasets: [{
                 label: 'Lượt đăng nhập',
-                data: dataValues || [],
+                data: dataValues,
                 borderColor: '#10b981',
                 backgroundColor: gradient,
                 borderWidth: 3,
@@ -73,10 +82,14 @@ function renderLoginChart(labels, dataValues) {
 function renderRegisterChart(rawRegisterData) {
     const currentMonth = new Date().getMonth() + 1;
     const labels = Array.from({length: currentMonth}, (_, i) => `T${i + 1}`);
-    const dataValues = (rawRegisterData || []).slice(0, currentMonth);
+    const dataValues = rawRegisterData.slice(0, currentMonth);
 
     const ctx = document.getElementById('registerChart').getContext('2d');
-    new Chart(ctx, {
+    if (registerChartInstance) {
+        registerChartInstance.destroy();
+    }
+
+    registerChartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
@@ -97,7 +110,7 @@ function renderRegisterChart(rawRegisterData) {
 
 function renderTopFoods(foods) {
     const container = document.getElementById('top-foods-list');
-    if (!foods || Object.keys(foods).length === 0) {
+    if (Object.keys(foods).length === 0) {
         container.innerHTML = '<div class="food-item" style="justify-content: center; color: #9ca3af;">Chưa có dữ liệu</div>';
         return;
     }
@@ -111,19 +124,21 @@ function renderTopFoods(foods) {
 
 function renderPopularGoals(goals) {
     const container = document.getElementById('popular-goals-list');
-    if (!goals || Object.keys(goals).length === 0) {
+    if ( Object.keys(goals).length === 0) {
         container.innerHTML = '<div style="text-align: center; color: #9ca3af;">Chưa có dữ liệu</div>';
         return;
     }
-    container.innerHTML = Object.entries(goals).map(([name, percent]) => `
+   container.innerHTML = Object.entries(goals).map(([name, percent]) => {
+        const safePercent = Number.isFinite(Number(percent)) ? Number(percent) : 0;
+        return `
         <div class="progress-item">
             <div class="progress-label">
                 <span>${name}</span>
-                <strong>${percent.toFixed(0)}%</strong>
+                <strong>${safePercent.toFixed(0)}%</strong>
             </div>
             <div class="progress-bg">
-                <div class="progress-fill" style="width: ${percent}%;"></div>
+                 <div class="progress-fill" style="width: ${safePercent}%;"></div>
             </div>
-        </div>
-    `).join('');
+         </div>`;
+    }).join('');
 }

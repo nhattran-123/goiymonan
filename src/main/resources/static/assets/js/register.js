@@ -39,13 +39,14 @@ $(document).ready(function() {
         data.diseaseIds = $('#disease-select').val() || [];
         
         // SỬA: Lấy giá trị Goal Type từ Radio button
-        data.goalType = $("input[name='goal']:checked").val();
+        data.goalType = $("input[name='goalType']:checked").val();
         
         // SỬA: Đảm bảo các chỉ số là kiểu số (Number)
         data.age = parseInt(data.age);
         data.height = parseFloat(data.height);
         data.weight = parseFloat(data.weight);
-        data.desiredWeight = parseFloat(data.desired_weight);
+        data.desiredWeight = parseFloat(data.desiredWeight);
+        data.desiredHeight = parseFloat(data.desiredHeight);
 
         try {
             const res = await fetch('/api/auth/register', {
