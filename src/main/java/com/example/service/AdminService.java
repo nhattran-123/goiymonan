@@ -9,8 +9,6 @@ import java.util.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.sql.Date;
-import java.util.*;
 
 @Service
 public class AdminService {
@@ -51,41 +49,49 @@ public class AdminService {
         data.put("totalMenus", totalMenus);
         data.put("todayActivities", loginRepo.countByLoginDate(LocalDate.now()));
 
-        data.put("userGrowth", calcGrowthPercent(userRepo.countUsersThisMonth(), userRepo.countUsersLastMonth()));
-        data.put("foodGrowth", calcGrowthPercent(foodRepo.countFoodsThisMonth(), foodRepo.countFoodsLastMonth()));
-        data.put("menuGrowth", calcGrowthPercent(dailyMenuRepo.countMenusThisMonth(), dailyMenuRepo.countMenusLastMonth()));
+        LocalDate today = LocalDate.now();
+        LocalDate thisMonthStart = today.withDayOfMonth(1);
+        LocalDate nextMonthStart = thisMonthStart.plusMonths(1);
+        LocalDate lastMonthStart = thisMonthStart.minusMonths(1);
+
+        data.put("userGrowth", calcGrowthPercent(
+                userRepo.countByCreateAtBetween(thisMonthStart, nextMonthStart.minusDays(1)),
+                userRepo.countByCreateAtBetween(lastMonthStart, thisMonthStart.minusDays(1))));
+        data.put("foodGrowth", calcGrowthPercent(
+                foodRepo.countByCreateAtBetween(thisMonthStart, nextMonthStart.minusDays(1)),
+                foodRepo.countByCreateAtBetween(lastMonthStart, thisMonthStart.minusDays(1))));
+        data.put("menuGrowth", calcGrowthPercent(
+                dailyMenuRepo.countByMenuDateBetween(thisMonthStart, nextMonthStart.minusDays(1)),
+                dailyMenuRepo.countByMenuDateBetween(lastMonthStart, thisMonthStart.minusDays(1))));
 
         List<Integer> userChartData = new ArrayList<>(Collections.nCopies(12, 0));
-        for (Object[] row : userRepo.countNewUsersByMonthInCurrentYear()) {
-            int month = ((Number) row[0]).intValue();
-            int count = ((Number) row[1]).intValue();
-            if (month >= 1 && month <= 12) {
-                userChartData.set(month - 1, count);
-            }
+        LocalDate yearStart = today.withDayOfYear(1);
+        LocalDate yearEnd = yearStart.plusYears(1).minusDays(1);
+        for (User user : userRepo.findByCreateAtBetween(yearStart, yearEnd)) {
+            if (user.getCreateAt() == null) continue;
+            int monthIndex = user.getCreateAt().getMonthValue() - 1;
+            userChartData.set(monthIndex, userChartData.get(monthIndex) + 1);
         }
         data.put("userChartData", userChartData);
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM");
         Map<String, Long> loginStats = new LinkedHashMap<>();
+        LocalDate tenDaysAgo = today.minusDays(9);
         for (int i = 9; i >= 0; i--) {
-            LocalDate day = LocalDate.now().minusDays(i);
+            LocalDate day = today.minusDays(i);
             loginStats.put(day.format(formatter), 0L);
         }
-         for (Object[] row : loginRepo.countDistinctUsersByLoginDateBetweenLast10Days()) {
-            String dayLabel;
-            Object rawDate = row[0];
-            if (rawDate instanceof Date sqlDate) {
-                dayLabel = sqlDate.toLocalDate().format(formatter);
-            } else {
-                try {
-                    dayLabel = LocalDate.parse(String.valueOf(rawDate)).format(formatter);
-                } catch (DateTimeParseException e) {
-                    dayLabel = String.valueOf(rawDate);
-                }
-            }
-            long loginCount = ((Number) row[1]).longValue();
+           Map<LocalDate, Set<Integer>> uniqueLoginsPerDay = new HashMap<>();
+        for (UserLogin login : loginRepo.findByLoginDateBetween(tenDaysAgo, today)) {
+            uniqueLoginsPerDay
+                    .computeIfAbsent(login.getLoginDate(), k -> new HashSet<>())
+                    .add(login.getUserId());
+        }
+
+        for (Map.Entry<LocalDate, Set<Integer>> entry : uniqueLoginsPerDay.entrySet()) {
+            String dayLabel = entry.getKey().format(formatter);
             if (loginStats.containsKey(dayLabel)) {
-                loginStats.put(dayLabel, loginCount);
+                loginStats.put(dayLabel, (long) entry.getValue().size());
             }
         }
         data.put("chartLabels", new ArrayList<>(loginStats.keySet()));

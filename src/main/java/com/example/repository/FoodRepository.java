@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import java.time.LocalDate;
 import java.util.List;
 
 @Repository
@@ -24,9 +25,5 @@ public interface FoodRepository extends JpaRepository<Food, Integer> {
            "SELECT fd.Food_id FROM food_disease fd JOIN user_disease ud ON fd.Disease_id = ud.Disease_id WHERE ud.User_id = :userId AND fd.Rating = 1 " +
            ")", nativeQuery = true)
     List<Food> findSafeFoodsForUser(@Param("userId") Long userId);
- @Query(value = "SELECT COUNT(*) FROM food WHERE create_at >= DATE_FORMAT(CURRENT_DATE, '%Y-%m-01')", nativeQuery = true)
-    long countFoodsThisMonth();
-
-    @Query(value = "SELECT COUNT(*) FROM food WHERE create_at >= DATE_FORMAT(DATE_SUB(CURRENT_DATE, INTERVAL 1 MONTH), '%Y-%m-01') AND create_at < DATE_FORMAT(CURRENT_DATE, '%Y-%m-01')", nativeQuery = true)
-    long countFoodsLastMonth();
+  long countByCreateAtBetween(LocalDate startDate, LocalDate endDate);
 }
