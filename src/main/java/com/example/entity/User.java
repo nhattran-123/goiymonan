@@ -40,5 +40,10 @@ public class User {
     @Column(name="create_at")
     private LocalDate createAt;
 
-
+    @PrePersist
+    protected void prePersist() {
+        if (createAt == null) {
+            createAt = LocalDate.now();
+        }
+    }
 }

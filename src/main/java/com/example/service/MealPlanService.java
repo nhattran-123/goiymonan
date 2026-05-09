@@ -97,7 +97,9 @@ public class MealPlanService {
         }
 
         // TDEE/Target Calo
-        float targetCalories = bmr * 1.2f; 
+         float targetCalories = (goal != null)
+                ? goal.getTargetCalories()
+                : bmr * 1.2f;
         dto.setTodayCalories(todayCalories);
         dto.setTargetCalories(targetCalories);
         dto.setRemainCalories(targetCalories - todayCalories);

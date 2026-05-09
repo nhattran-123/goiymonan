@@ -96,17 +96,20 @@
             <div class="step-container" id="step3" style="display: none;">
                 <div class="progress-bar"><div class="progress-step active"></div><div class="progress-step active"></div><div class="progress-step active"></div><div class="progress-step"></div></div>
                 <h1 class="login-title text-left">Mục tiêu sức khỏe</h1>
-                
+                <div class="input-group">
+                    <label>Chiều cao mục tiêu (cm)</label>
+                    <input type="number" id="targetHeight" name="desiredHeight" placeholder="175">
+                </div>
                 <div class="input-group">
                     <label>Cân nặng mục tiêu (kg)</label>
                     <input type="number" id="targetWeight" name="desiredWeight" placeholder="60">
                 </div>
-                <div class="input-group">
+                 <div class="input-group">
                     <label>Mục tiêu</label>
-                    <div class="radio-group" style="display: flex; gap: 15px; margin-top: 10px;">
-                        <label><input type="radio" name="goalType" value="Giảm cân"> Giảm cân</label>
-                        <label><input type="radio" name="goalType" value="Duy trì" checked> Duy trì</label>
-                        <label><input type="radio" name="goalType" value="Tăng cân"> Tăng cân</label>
+                    <div class="radio-group goal-radio-group" style="display: flex; gap: 12px; margin-top: 10px;">
+                        <label class="goal-option" for="goal1"><input type="radio" id="goal1" name="goalType" value="Giảm cân"><span>Giảm cân</span></label>
+                        <label class="goal-option" for="goal2"><input type="radio" id="goal2" name="goalType" value="Duy trì" checked><span>Duy trì</span></label>
+                        <label class="goal-option" for="goal3"><input type="radio" id="goal3" name="goalType" value="Tăng cân"><span>Tăng cân</span></label>
                     </div>
                 </div>
                 <div class="btn-footer" style="display: flex; gap: 10px; margin-top: 30px;">

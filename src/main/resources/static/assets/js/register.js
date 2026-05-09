@@ -15,8 +15,8 @@ $(document).ready(function() {
             $('#allergy-select').empty();
             $('#disease-select').empty();
 
-            result.listIngredient.forEach(i => $('#allergy-select').append(new Option(i.name, i.id)));
-            result.listDisease.forEach(d => $('#disease-select').append(new Option(d.name, d.id)));
+             result.listIngredient.forEach(i => $('#allergy-select').append(new Option(i.ingredientName, i.ingredientId)));
+            result.listDisease.forEach(d => $('#disease-select').append(new Option(d.diseaseName, d.diseaseId)));
         } catch (err) {
             console.error("Lỗi khi tải dữ liệu dropdown:", err);
         }
