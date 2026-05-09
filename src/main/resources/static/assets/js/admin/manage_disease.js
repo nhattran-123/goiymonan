@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", function() {
     activateCompatibilityTabByQuery();
 });
 const PAGE_SIZE = 10;
+const MAX_PAGE_BUTTONS = 5;
 let diseaseData = [];
 let compatibilityData = [];
 let diseasePage = 1;
@@ -120,11 +121,30 @@ function renderPagination(containerId, totalItems, currentPage, onPageClick) {
         container.innerHTML = '';
         return;
     }
+    const halfWindow = Math.floor(MAX_PAGE_BUTTONS / 2);
+    let startPage = Math.max(1, currentPage - halfWindow);
+    let endPage = Math.min(totalPages, startPage + MAX_PAGE_BUTTONS - 1);
+
+    if (endPage - startPage + 1 < MAX_PAGE_BUTTONS) {
+        startPage = Math.max(1, endPage - MAX_PAGE_BUTTONS + 1);
+    }
+
+    const buttonStyle = (isActive) => `padding:6px 10px;border:1px solid #d1d5db;background:${isActive ? '#10b981' : '#fff'};color:${isActive ? '#fff' : '#374151'};border-radius:6px;cursor:pointer;`;
 
     let html = '';
-    for (let page = 1; page <= totalPages; page++) {
-        html += `<button type="button" class="page-btn ${page === currentPage ? 'active' : ''}" data-page="${page}" style="padding:6px 10px;border:1px solid #d1d5db;background:${page === currentPage ? '#10b981' : '#fff'};color:${page === currentPage ? '#fff' : '#374151'};border-radius:6px;cursor:pointer;">${page}</button>`;
+    
+    if (currentPage > 1) {
+        html += `<button type="button" class="page-btn" data-page="${currentPage - 1}" style="${buttonStyle(false)}">&laquo;</button>`;
     }
+
+    for (let page = startPage; page <= endPage; page++) {
+        html += `<button type="button" class="page-btn ${page === currentPage ? 'active' : ''}" data-page="${page}" style="${buttonStyle(page === currentPage)}">${page}</button>`;
+    }
+
+    if (currentPage < totalPages) {
+        html += `<button type="button" class="page-btn" data-page="${currentPage + 1}" style="${buttonStyle(false)}">&raquo;</button>`;
+    }
+
     container.innerHTML = html;
     container.querySelectorAll('.page-btn').forEach(btn => {
         btn.addEventListener('click', () => onPageClick(Number(btn.dataset.page)));
