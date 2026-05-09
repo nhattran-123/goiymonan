@@ -61,6 +61,28 @@ public class DiseaseService {
     public List<Disease> getAllDiseases() {
         return diseaseRepo.findAll();
     }
+    public List<Map<String, Object>> getAllDiseasesForAdmin() {
+        Map<Integer, Long> foodCountByDiseaseId = foodDiseaseRepo.findAll().stream()
+                .filter(fd -> fd.getDisease() != null
+                        && fd.getDisease().getDiseaseId() != null
+                        && fd.getRating() != null
+                        && fd.getRating() >= 3)
+                .collect(Collectors.groupingBy(
+                        fd -> fd.getDisease().getDiseaseId(),
+                        Collectors.counting()
+                ));
+
+        return diseaseRepo.findAll().stream().map(disease -> {
+            long foodCount = foodCountByDiseaseId.getOrDefault(disease.getDiseaseId(), 0L);
+
+            return Map.<String, Object>of(
+                    "diseaseId", disease.getDiseaseId(),
+                    "diseaseName", Optional.ofNullable(disease.getDiseaseName()).orElse(""),
+                    "diseaseDescription", Optional.ofNullable(disease.getDiseaseDescription()).orElse(""),
+                    "foodCount", foodCount
+            );
+        }).collect(Collectors.toList());
+    }
 
     public List<Map<String, Object>> getAllCompatibility() {
        return foodDiseaseRepo.findAll().stream().map(item -> Map.<String, Object>of(

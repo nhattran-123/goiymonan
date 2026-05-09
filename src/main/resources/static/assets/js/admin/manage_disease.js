@@ -8,6 +8,11 @@ document.addEventListener("DOMContentLoaded", function() {
     loadDropdownData();
     activateCompatibilityTabByQuery();
 });
+const PAGE_SIZE = 10;
+let diseaseData = [];
+let compatibilityData = [];
+let diseasePage = 1;
+let compatibilityPage = 1;
 
 // 1. Chuyển Tab
 function initTabs() {
@@ -47,9 +52,16 @@ function initSearch() {
 // 2. Xử lý Bệnh lý (Disease)
 async function fetchDiseases() {
     const response = await fetch('/api/admin/diseases');
-    const data = await response.json();
+     diseaseData = await response.json();
+    diseasePage = 1;
+    renderDiseases();
+}
+
+function renderDiseases() {
     const tbody = document.getElementById('disease-tbody');
-     tbody.innerHTML = data.map(d => {
+       const start = (diseasePage - 1) * PAGE_SIZE;
+    const currentPageData = diseaseData.slice(start, start + PAGE_SIZE);
+    tbody.innerHTML = currentPageData.map(d => {
         const name = escapeHtml(d.diseaseName || '');
         const desc = escapeHtml(d.diseaseDescription || '');
 
@@ -64,14 +76,25 @@ async function fetchDiseases() {
             </td>
        </tr>`;
     }).join('');
+    renderPagination('disease-pagination', diseaseData.length, diseasePage, (page) => {
+        diseasePage = page;
+        renderDiseases();
+    });
 }
 
 // 3. Xử lý Tương thích (Compatibility)
 async function fetchCompatibility() {
     const response = await fetch('/api/admin/compatibility');
-    const data = await response.json();
+     compatibilityData = await response.json();
+    compatibilityPage = 1;
+    renderCompatibility();
+}
+
+function renderCompatibility() {
     const tbody = document.getElementById('compatibility-tbody');
-    tbody.innerHTML = data.map(item => `
+    const start = (compatibilityPage - 1) * PAGE_SIZE;
+    const currentPageData = compatibilityData.slice(start, start + PAGE_SIZE);
+    tbody.innerHTML = currentPageData.map(item => `
         <tr style="border-bottom: 1px solid #f3f4f6;">
             <td style="padding: 15px; font-weight: 500;">${escapeHtml(item.foodName)}</td>
             <td><span style="background: #e0f2fe; color: #0284c7; padding: 4px 10px; border-radius: 20px; font-size: 13px;">${escapeHtml(item.diseaseName)}</span></td>
@@ -81,7 +104,33 @@ async function fetchCompatibility() {
             </td>
         </tr>
     `).join('');
+
+     renderPagination('compatibility-pagination', compatibilityData.length, compatibilityPage, (page) => {
+        compatibilityPage = page;
+        renderCompatibility();
+    });
 }
+
+function renderPagination(containerId, totalItems, currentPage, onPageClick) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+
+    if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    let html = '';
+    for (let page = 1; page <= totalPages; page++) {
+        html += `<button type="button" class="page-btn ${page === currentPage ? 'active' : ''}" data-page="${page}" style="padding:6px 10px;border:1px solid #d1d5db;background:${page === currentPage ? '#10b981' : '#fff'};color:${page === currentPage ? '#fff' : '#374151'};border-radius:6px;cursor:pointer;">${page}</button>`;
+    }
+    container.innerHTML = html;
+    container.querySelectorAll('.page-btn').forEach(btn => {
+        btn.addEventListener('click', () => onPageClick(Number(btn.dataset.page)));
+    });
+}
+
 
 // 4. Modal Logic
 async function loadDropdownData() {

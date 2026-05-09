@@ -123,7 +123,7 @@ public class AdminManagementRestController {
 
     @GetMapping("/diseases")
     public ResponseEntity<?> getDiseases() {
-        return ResponseEntity.ok(diseaseService.getAllDiseases());
+        return ResponseEntity.ok(diseaseService.getAllDiseasesForAdmin());
     }
 
     @GetMapping("/compatibility")
